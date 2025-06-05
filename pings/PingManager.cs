@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Linq;
+using I2.Loc;
 using Steamworks;
 using UnityEngine;
 using UnityEngine.UI;
@@ -11,6 +12,10 @@ namespace pings
     {
         private static Canvas _canvas;
         private static GameObject _pingPrefab;
+        
+        private static LanguageSourceData _lang;
+        private static string TermPing => _lang.GetTranslation("pings/ping");
+        
         private static Camera Camera => Camera.main ?? Camera.current;
         private static readonly Dictionary<CSteamID, PingInstance> ActivePings = new Dictionary<CSteamID, PingInstance>();
 
@@ -79,6 +84,7 @@ namespace pings
             };
         }
 
+
         private static void RemovePing(CSteamID steamID)
         {
             if (!ActivePings.Remove(steamID, out var ping)) return; // If ping doesn't exist, do nothing
@@ -92,23 +98,24 @@ namespace pings
 
         private static (string, Transform) GetPingData(Transform transform, Vector3 worldPos)
         {
-            var tList = new List<Transform>();
-            for (var t = transform; t; t = t.parent)
-                tList.Add(t);
-            var transforms = tList.ToArray();
-
+            var path = Path(transform);
             if (Pings.DebugMode)
-                Debug.Log($"[Pings: Handling] Creating ping with {transforms.Length} transforms: {string.Join(" / ", transforms.Select(t => t.name))}");
-
-            foreach (var rule in NameRules.WordRules.Where(rule => rule.Predicate(transforms)))
-                return (rule.Result.name, transforms[ rule.Result.index + (rule.Result.index < 0 ? transforms.Length : 0) ]);
+                Debug.Log($"[Pings: Handling] Ping at {worldPos} on path {path}");
             
-            foreach (var rule in NameRules.GlobalRules.Where(rule => rule.Predicate(transforms)))
-                return rule.Formatter(transforms, worldPos);
+            if (path.Contains("Armature") && !path.Contains("AI") && !path.Contains("Seagull"))
+                return ("Bruce the Shark", transform.root); // If it works, it works
+            
+            if ((path.Contains("Terrain") || path.Contains("BigRock")) && !path.Contains("Shark"))
+                return (worldPos.y > -2 ? "Island" : "Ocean Floor", null);
+                
+            string str;
+            (transform, str) = GetDataByType(transform);
+            if (str != null)
+                return (str, transform); // If we found a specific type, return it
             
             if (Pings.DebugMode)
-                Debug.LogWarning("[Pings: Handling] No rules matched");
-            return ("Ping", transform);
+                Debug.Log(" - No specific type found for path, using default ping.");
+            return (TermPing, transform);
         }
         
         private static Outline CreateOutline(Transform target)
@@ -156,6 +163,7 @@ namespace pings
         {
             _canvas = pings.Setup.CreateCanvas();
             _pingPrefab = pings.Setup.CreatePingPrefab();
+            _lang = pings.Setup.LoadLocalizations();
         }
         
         public static void RemoveAllPings()
@@ -169,6 +177,127 @@ namespace pings
             RemoveAllPings();
             if (_canvas) Destroy(_canvas.gameObject);
             if (_pingPrefab) Destroy(_pingPrefab);
+        }
+
+        private static string Path(Transform transform)
+        {
+            if (!transform) return string.Empty;
+            return (transform.parent ? Path(transform.parent)+"/" : "") + transform.name;
+        }
+
+        // TODO: QuestInteractable 
+        public static Dictionary<Type, Func<List<Transform>, int, Component, (Transform, string)>> DataByType = 
+                   new Dictionary<Type, Func<List<Transform>, int, Component, (Transform, string)>>
+        {
+            { typeof(Block), (transformsList, i, c) 
+                => (transformsList[i], BlockName((Block)c)) },
+            
+            { typeof(PickupItem), (transformsList, i, c) 
+                => {
+                var t = transformsList[i];
+                var item = (PickupItem)c;
+                var pickupName = item.PickupName;
+                switch (item.pickupItemType)
+                {
+                    case PickupItemType.QuestItem:
+                        pickupName = "Quest Item: " + pickupName;
+                        break;
+                    case PickupItemType.NoteBookNote:
+                        pickupName = "Note: " + CleanString(t.name.Substring(t.name.LastIndexOf('_') + 1));
+                        break;
+                }
+                return (t, pickupName);
+            }},
+            
+            { typeof(AI_StateMachine), (transformsList, i, c) 
+                => {
+                    var t = transformsList[0].root.GetComponent<AI_StateMachine_Shark>()?.trackedRotational?.transform; // Shark outline appears on different transform
+                    if (!t) t = transformsList[i];
+                    return (t, AIName(c));
+                }},
+            
+            { typeof(AI_Sub), (transformsList, i, c) 
+                => (transformsList[i], AIName(c)) },
+            
+            { typeof(Seagull), (transformsList, i, c) 
+                => (transformsList[i], _lang.GetTranslation("Item/Seagull")) },
+            
+            { typeof(Landmark), (transformsList, i, c) 
+                => {
+                    var tLandmark = transformsList[Math.Max(i - 4, 0)]; // Min(index + 4, tList.Count - 1) if tList is reversed
+                    var name = CleanString(tLandmark.name).Replace("Character Unlock ", "Character Unlock: ");
+                    return (name.Contains("Character Unlock") ? tLandmark : null, name);
+                }}
+        };
+        
+        private static (Transform, string) GetDataByType(Transform transform)
+        {
+            if (!transform) return (null, null);
+            var tList = new List<Transform>();
+            for (var t = transform; t; t = t.parent)
+                tList.Add(t);
+            // tList.Reverse();
+
+            foreach (var type in DataByType.Keys)
+            {
+                var index = 0;
+                foreach (var component in tList.Select(t => t.GetComponent(type)))
+                {
+                    if (component) 
+                        return DataByType[type](tList, index, component);
+                    index++;
+                }
+            }
+            
+            return (transform, null); 
+        }
+        
+        private static string AIName(Component ai)
+        {
+            var term = ai?.name;
+            if (term.IsNullOrEmpty())
+                return TermPing; // If name is not found, return default ping name
+            
+            var startIndex = term.Contains("Sub_") ? 7 : 3; // If it's a Sub AI, skip "AI_Sub_" prefix, otherwise skip "AI_"
+            var endIndex = term.IndexOf("(", StringComparison.Ordinal);
+            term = (endIndex < 0 ? term.Substring(startIndex)
+                    : term.Substring(startIndex, endIndex - startIndex))
+                .Trim();
+            switch (term)
+            {
+                case "Shark":
+                    return "Bruce the Shark";
+                case "StoneBird":
+                    return "Screecher";
+                case "StoneBird_Caravan":
+                    return "White Screecher";
+                case "Boar":
+                    return "Warthog";
+                default:
+                    return CleanString(term);
+            }
+        }
+        private static string BlockName(Block block)
+        {
+            var term = block.buildableItem.settings_Inventory.LocalizationTerm;
+            term = _lang.GetTranslation(term);
+            if (term.IsNullOrEmpty())
+                return TermPing; // If translation is not found, return default ping name
+                    
+            var descIndex = term.IndexOf("@", StringComparison.Ordinal);
+            if (descIndex >= 0)
+                term = term.Substring(0, descIndex).Trim(); // Remove description part if exists
+            
+            return term;
+        }
+        private static string CleanString(string input)
+        {
+            input = input.Replace("_", " "); // Replace underscores with spaces
+            input = System.Text.RegularExpressions.Regex.Replace(input, "(?<!^)([A-Z])", " $1"); // Insert space before each uppercase letter except the first
+            input = System.Text.RegularExpressions.Regex.Replace(input, @"\d+", ""); // Remove numbers
+            input = System.Text.RegularExpressions.Regex.Replace(input, @"\(.*?\)", ""); // Remove text with parentheses
+            input = System.Text.RegularExpressions.Regex.Replace(input, " +", " "); // Remove extra spaces
+            return input.Trim();
         }
     }
 }

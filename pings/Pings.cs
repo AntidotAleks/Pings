@@ -1,8 +1,11 @@
 using System;
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
+using System.Linq;
 using System.Runtime.CompilerServices;
+using System.Text;
 using HMLLibrary;
+using RaftModLoader;
 using Steamworks;
 using UnityEngine;
 
@@ -19,12 +22,15 @@ namespace pings
         // Materials for outlines
         private AssetBundle _asset;
         internal static Material OutlineMaterial, FillMaterial;
+        internal static string langCsv;
 
         #region Mod Loading / Unloading
         public IEnumerator Start()
         {
             #region AssetBundle Loading
+            langCsv = Encoding.UTF8.GetString(GetEmbeddedFileBytes("misc/lang.csv"));
             var request = AssetBundle.LoadFromMemoryAsync(GetEmbeddedFileBytes("misc/outline.assets"));
+            
             yield return request;
             _asset = request.assetBundle;
             OutlineMaterial = _asset.LoadAsset<Material>("OutlineMask");
@@ -35,7 +41,25 @@ namespace pings
             
             Networking.OnLoad();
             PingManager.Setup();
-            
+            TestingThings.G();
+        }
+        
+        [ConsoleCommand(name: "g", docs: "g.")]
+        public static string MyCommand(string[] args)
+        {
+            if (args.Length == 0)
+                return "No arguments provided. Usage: g <argument>";
+            TestingThings.G(args[0]);
+            return null;
+        }
+        
+        [ConsoleCommand(name: "d", docs: "d.")]
+        public static string MyCommand2(string[] args)
+        {
+            if (args.Length == 0)
+                return "No arguments provided. Usage: g <argument>";
+            TestingThings.D(args[0]);
+            return null;
         }
 
         public void OnModUnload()
@@ -129,8 +153,8 @@ namespace pings
         /// <returns>True if hit, false otherwise</returns>
         public static bool PingCast(Ray ray, out RaycastHit hit)
         {
-            var radius = 0.1f; // Starting radius
-            var distanceFromOrigin = 0.2f; // Starting distance
+            var radius = 0.001f; // Starting radius
+            var distanceFromOrigin = 0.15f; // Starting distance
         
             for (var i = 0; i < 7; i++)
             {
@@ -138,6 +162,7 @@ namespace pings
                     return true;
 
                 radius *= 2f;
+                radius += 0.06f; 
                 distanceFromOrigin *= 2f;
                 distanceFromOrigin += 1f;
             }
@@ -151,10 +176,10 @@ namespace pings
         private static readonly Collider[] Colliders = new Collider[128]; // I got 8 colliders in a single ping at most, so 128 should be more than enough
         public static Transform ClosestCollider(Vector3 worldPos)
         {
-            const float radius = 0.1f;
+            const float radius = 0.05f;
             var s = 1;
             var amount = 0;
-            while (s <= 128) // Limit search radius to 12.8 meters
+            while (s*radius <= 10f) // Limit search radius
             {
                 amount = Physics.OverlapSphereNonAlloc(worldPos, radius * s, Colliders);
                 if (amount > 0) break; // Found at least one collider

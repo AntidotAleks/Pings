@@ -1,4 +1,9 @@
-﻿using System.Linq;
+﻿using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
+using HMLLibrary;
+using I2.Loc;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -6,6 +11,29 @@ namespace pings
 {
     public class Setup : MonoBehaviour
     {
+        private static readonly Dictionary<string, Dictionary<string, string>> Translations = new Dictionary<string, Dictionary<string, string>>
+        {
+            {
+                "pings/ping",
+                new Dictionary<string, string>
+                {
+                    {"en", "Ping"},
+                    {"sv", "Ping"},
+                    {"fr", "Ping"},
+                    {"it", "Ping"},
+                    {"de", "Ping"},
+                    {"es", "Ping"},
+                    {"pl", "Ping"},
+                    {"pt-BR", "Ping"},
+                    {"zh-CN", "Ping"},
+                    {"ja", "Ping"},
+                    {"ko", "Ping"},
+                    {"uk", "Пінг"}
+                }
+            }
+        };
+        
+        
         private static Canvas _canvas;
         
         internal static Canvas CreateCanvas()
@@ -62,7 +90,7 @@ namespace pings
             return pingPrefab;
         }
         
-        public class DiamondShape : MaskableGraphic
+        private class DiamondShape : MaskableGraphic
         {
             protected override void OnPopulateMesh(VertexHelper vh)
             {
@@ -79,6 +107,42 @@ namespace pings
                 // Two triangles to form a diamond
                 vh.AddTriangle(0, 1, 2);
                 vh.AddTriangle(2, 3, 0);
+            }
+        }
+
+        internal static LanguageSourceData LoadLocalizations()
+        {
+            var source = LocalizationManager.Sources?[0];
+            if (source == null)
+            {
+                Debug.LogWarning("No language sources found. Should not happen. If happened, skill issue.");
+                return null;
+            }
+            
+            Debug.Log(source.GetLanguagesCode().Aggregate("Languages: ", (current, lang) => current + $"{lang}, ").TrimEnd(',', ' '));
+            // foreach (var (term, entries) in Translations)
+            //     AddEntry(term, entries);
+            // source.UpdateDictionary();
+            source.Import_CSV(null, Pings.langCsv, eSpreadsheetUpdateMode.Merge, ';');
+            return source;
+        }
+        
+
+        private static void AddEntry(string term, Dictionary<string, string> entries)
+        {
+            var source = LocalizationManager.Sources[0];
+            var termData = source.AddTerm(term, eTermType.Text);
+            
+            foreach (var (langCode, translate) in entries)
+            {
+                var langIndex = source.GetLanguageIndexFromCode(langCode);
+                if (langIndex < 0)
+                {
+                    if (Pings.DebugMode)
+                        Debug.LogWarning($"Language '{langCode}' not found in source. Skipping entry for this language.");
+                    continue;
+                }
+                termData.SetTranslation(langIndex, translate);
             }
         }
     }
