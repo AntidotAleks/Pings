@@ -30,10 +30,15 @@
       }
     },
     {
-      "type": "checkbox",
+      "type": "combobox",
       "name": "debugMode",
-      "text": "Enable Logging In The Console",
-      "default": false
+      "text": "Debug Logging Level In Console",
+      "default": "Disabled",
+      "values": [
+        "Disabled",
+        "Normal",
+        "Detailed"
+      ]
     }
   ]
 }

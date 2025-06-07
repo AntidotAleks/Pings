@@ -18,14 +18,14 @@ namespace pings
         {
             if (Raft_Network.IsHost)
             {
-                if (Pings.DebugMode)
+                if (Pings.DebugMode >= 2)
                     Debug.Log("[Pings: Networking] Player is host, Pings mod is active.");
                 RAPI.SendNetworkMessage(new Message((Messages)MessageTypes.PingsModIsPresent), Pings.ModChannel);
                 Pings.HasPingsMod = true;
             }
             else if (RAPI.IsCurrentSceneGame()) // In a world, but not host
             {
-                if (Pings.DebugMode)
+                if (Pings.DebugMode >= 2)
                     Debug.Log("[Pings: Networking] Player is not host, requesting Pings mod status.");
                 RAPI.SendNetworkMessage(new Message((Messages)MessageTypes.RequestPingsModStatus), Pings.ModChannel);
             }
@@ -48,19 +48,19 @@ namespace pings
             {
                 case (Messages)MessageTypes.PingsModIsPresent:
                     
-                    if (Pings.DebugMode)
+                    if (Pings.DebugMode >= 2)
                         Debug.Log("[Pings: Networking] Pings mod is enabled on the server.");
                     Pings.HasPingsMod = true;
                     break;
                 
                 case (Messages)MessageTypes.PingsModIsRemoved:
-                    if (Pings.DebugMode)
+                    if (Pings.DebugMode >= 2)
                         Debug.Log("[Pings: Networking] Pings mod was disabled on the server.");
                     Pings.HasPingsMod = false;
                     break;
                 
                 case (Messages)MessageTypes.RequestPingsModStatus:
-                    if (Pings.DebugMode)
+                    if (Pings.DebugMode >= 2)
                         Debug.Log("[Pings: Networking] Received request for Pings mod status, responding...");
                     RAPI.SendNetworkMessage(new Message((Messages)MessageTypes.PingsModIsPresent), Pings.ModChannel);
                     break;
@@ -80,13 +80,14 @@ namespace pings
                         // As host, relay ping to all others (someone -> host-self -> everyone)
                     
                     var hitTransform = CastUtil.ClosestCollider(position);
-                    if (Pings.DebugMode)
+                    if (Pings.DebugMode >= 2)
                         Debug.Log($"[Pings: Networking] Received a ping packet at {position} from player {RAPI.GetUsernameFromSteamID(senderSteamID)}.");
                     PingManager.CreatePing(senderSteamID, position, hitTransform);
                     break;
                 
                 default:
-                    Debug.Log("[Pings: Networking] Unknown message type received: " + netMessage.message.Type);
+                    if (Pings.DebugMode >= 1)
+                    Debug.Log($"[Pings: Networking] Unknown message type received: {netMessage.message.Type}. Is another mod using the same channel ({Pings.ModChannel})?");
                     break;
             }
         }

@@ -1,8 +1,7 @@
-﻿using System.Collections.Generic;
+﻿using System.Collections;
+using System.Collections.Generic;
 using System.Linq;
 using System.Text;
-using System.Text.RegularExpressions;
-using HMLLibrary;
 using I2.Loc;
 using UnityEngine;
 using UnityEngine.UI;
@@ -11,27 +10,6 @@ namespace pings
 {
     public class Setup : MonoBehaviour
     {
-        private static readonly Dictionary<string, Dictionary<string, string>> Translations = new Dictionary<string, Dictionary<string, string>>
-        {
-            {
-                "pings/ping",
-                new Dictionary<string, string>
-                {
-                    {"en", "Ping"},
-                    {"sv", "Ping"},
-                    {"fr", "Ping"},
-                    {"it", "Ping"},
-                    {"de", "Ping"},
-                    {"es", "Ping"},
-                    {"pl", "Ping"},
-                    {"pt-BR", "Ping"},
-                    {"zh-CN", "Ping"},
-                    {"ja", "Ping"},
-                    {"ko", "Ping"},
-                    {"uk", "Пінг"}
-                }
-            }
-        };
         
         
         private static Canvas _canvas;
@@ -110,40 +88,36 @@ namespace pings
             }
         }
 
-        internal static LanguageSourceData LoadLocalizations()
+        internal static void LoadLocalizations()
         {
             var source = LocalizationManager.Sources?[0];
             if (source == null)
             {
-                Debug.LogWarning("No language sources found. Should not happen. If happened, skill issue.");
-                return null;
+                Debug.LogError("No language sources found. Should not happen. If happened, skill issue.");
+                return;
             }
             
-            Debug.Log(source.GetLanguagesCode().Aggregate("Languages: ", (current, lang) => current + $"{lang}, ").TrimEnd(',', ' '));
-            // foreach (var (term, entries) in Translations)
-            //     AddEntry(term, entries);
-            // source.UpdateDictionary();
-            source.Import_CSV(null, Pings.langCsv, eSpreadsheetUpdateMode.Merge, ';');
-            return source;
+            var langCsv = Encoding.UTF8.GetString(Pings.mod.GetEmbeddedFileBytes("misc/lang.csv"));
+            source.Import_CSV(null, langCsv, eSpreadsheetUpdateMode.Merge, ';');
         }
-        
 
-        private static void AddEntry(string term, Dictionary<string, string> entries)
+        
+        private static AssetBundle _asset;
+        internal static IEnumerator LoadOutlines()
         {
-            var source = LocalizationManager.Sources[0];
-            var termData = source.AddTerm(term, eTermType.Text);
+            var request = AssetBundle.LoadFromMemoryAsync(Pings.mod.GetEmbeddedFileBytes("misc/outline.assets"));
             
-            foreach (var (langCode, translate) in entries)
-            {
-                var langIndex = source.GetLanguageIndexFromCode(langCode);
-                if (langIndex < 0)
-                {
-                    if (Pings.DebugMode)
-                        Debug.LogWarning($"Language '{langCode}' not found in source. Skipping entry for this language.");
-                    continue;
-                }
-                termData.SetTranslation(langIndex, translate);
-            }
+            yield return request;
+            _asset = request.assetBundle;
+            Pings.OutlineMaterial = _asset.LoadAsset<Material>("OutlineMask");
+            Pings.FillMaterial = _asset.LoadAsset<Material>("OutlineFill");
+        }
+
+        internal static void UnloadOutlines()
+        {
+            _asset?.Unload(true);
+            Destroy(Pings.OutlineMaterial);
+            Destroy(Pings.FillMaterial);
         }
     }
 }

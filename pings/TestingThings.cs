@@ -1,6 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
 using I2.Loc;
 using UnityEngine;
@@ -14,6 +13,7 @@ namespace pings
         public static void G()
         {
             _lang = LocalizationManager.Sources[0];
+            
 
             var hash = new HashSet<string>();
             foreach (var term in from term in _lang.GetTermsList() let pos = term.IndexOf("/", StringComparison.Ordinal) where pos >= 0 select term)
