@@ -44,3 +44,7 @@ ModPings/Landmark/Temperance/TPSceneMoontownReal/TPMoontownDecorations/BigIgloo;
 ModPings/Landmark/Temperance/TPSceneMoontownReal/TPLogicMoontown/TPElectricalBuilding/TPIglooCablePoint;Text;;Terminal;Термінал;;;;;;;;;;
 ModPings/Landmark/Temperance/TPSceneMoontownReal/TPLogicMoontown/TPElectricalBuilding;Text;;Electrical substation;Електрична підстанція;;;;;;;;;;
 ModPings/Landmark/Temperance/TPIceShore;Text;;Ice shore;Крижаний берег;;;;;;;;;;
+ModPings/Substring/CharacterUnlock;Text;;Character unlock: ;Розблокування персонажа: ;;;;;;;;;;
+ModPings/Landmark/Big/Hut;Text;;Hut debris;Залишки хатини;;;;;;;;;;
+ModPings/Landmark/Big/Parabols/Parabol;Text;;Parabolic antenna;Параболічна антена;;;;;;;;;;
+ModPings/Landmark/Big/Hutb;Text;ModPings/Landmark/Big/Hut;;;;;;;;;;;;
