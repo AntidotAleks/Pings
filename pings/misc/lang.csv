@@ -77,3 +77,7 @@ ModPings/Landmark/RadioTower/RadioTowerUtopia/Decorations/Plywood;Text;;Plywood;
 ModPings/Landmark/Tangaroa/Offset/TangaroaDecorations/TangaroaTower/TangaroaTowerCockpit/SeparatePickupModelCharacterUnlock/CharacterUnlockSuit;Text;;Character Unlock: Elaine;;;;;;;;;;;
 ModPings/Landmark/RadioTower/RadioTowerUtopia/CharacterUnlockMechanic;Text;;Character Unlock: Tala;;;;;;;;;;;
 ModPings/Landmark/Balboa/Interactables/CharacterUnlockBiker;Text;;Character Unlock: Johnny;;;;;;;;;;;
+ModPings/QuestInteractable/RelayStationButtonA;Text;ModPings/Alias/RelayStationPower;;;;;;;;;;;;
+ModPings/QuestInteractable/RelayStationButtonC;Text;ModPings/Alias/RelayStationPower;;;;;;;;;;;;
+ModPings/QuestInteractable/RelayStationButtonB;Text;ModPings/Alias/RelayStationPower;;;;;;;;;;;;
+ModPings/Alias/RelayStationPower;Text;;Main power switch;Головний вимикач живлення;;;;;;;;;;
