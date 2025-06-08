@@ -295,20 +295,6 @@ namespace pings
                 return (t, Translate("Game/TradingPost"));
             }},
             #endregion
-            #region CharacterUnlock
-            { typeof(CharacterUnlock), (transformsList, i, c)
-                => {
-                var t = transformsList[i];
-                var key = KeyString(t.name.Substring("CharacterUnlock_".Length)); // Remove "CharacterUnlock_" prefix
-                if (TryTranslate("ModPings/CharacterUnlock/"+key, out var name))
-                    return (t, name);
-                
-                if (Pings.DebugMode >= 1)
-                    Debug.Log($"[Pings: Localization] No translation found for CharacterUnlock using key ModPings/CharacterUnlock/{key}");
-                
-                return (t, Translate("ModPings/Substring/CharacterUnlock") + KeyToCleanString(key));
-            }},
-            #endregion
             #region Landmark
             { typeof(Landmark), (transformsList, i, c) 
                 => {

@@ -37,6 +37,7 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Include="misc\TranslationCheck.cs" />
     <Compile Include="Networking.cs" />
     <Compile Include="PingManager.cs" />
     <Compile Include="Pings.cs" />

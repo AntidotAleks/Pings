@@ -44,7 +44,6 @@ ModPings/Landmark/Temperance/TPSceneMoontownReal/TPMoontownDecorations/BigIgloo;
 ModPings/Landmark/Temperance/TPSceneMoontownReal/TPLogicMoontown/TPElectricalBuilding/TPIglooCablePoint;Text;;Terminal;Термінал;;;;;;;;;;
 ModPings/Landmark/Temperance/TPSceneMoontownReal/TPLogicMoontown/TPElectricalBuilding;Text;;Electrical substation;Електрична підстанція;;;;;;;;;;
 ModPings/Landmark/Temperance/TPIceShore;Text;;Ice shore;Крижаний берег;;;;;;;;;;
-ModPings/Substring/CharacterUnlock;Text;;Character unlock: ;Розблокування персонажа: ;;;;;;;;;;
 ModPings/Landmark/Big/Hut;Text;ModPings/Alias/Islands/Hut;;;;;;;;;;;;
 ModPings/Landmark/Big/Parabols/Parabol;Text;ModPings/Alias/SatelliteDish;;;;;;;;;;;;
 ModPings/Landmark/Big/Hutb;Text;ModPings/Alias/Islands/Hut;;;;;;;;;;;;
@@ -75,3 +74,6 @@ ModPings/Alias/SatelliteDish;Text;;Satellite dish;Супутникова ант�
 ModPings/Landmark/RadioTower/RadioTowerUtopia/Decorations/PowerBoxes;Text;;Electrical panel;Електричний щиток;;;;;;;;;;
 ModPings/Landmark/RadioTower/RadioTowerUtopia/Buildingparts/Stairs;Text;;Stairs;Сходи;;;;;;;;;;
 ModPings/Landmark/RadioTower/RadioTowerUtopia/Decorations/Plywood;Text;;Plywood;Фанера;;;;;;;;;;
+ModPings/Landmark/Tangaroa/Offset/TangaroaDecorations/TangaroaTower/TangaroaTowerCockpit/SeparatePickupModelCharacterUnlock/CharacterUnlockSuit;Text;;Character Unlock: Elaine;;;;;;;;;;;
+ModPings/Landmark/RadioTower/RadioTowerUtopia/CharacterUnlockMechanic;Text;;Character Unlock: Tala;;;;;;;;;;;
+ModPings/Landmark/Balboa/Interactables/CharacterUnlockBiker;Text;;Character Unlock: Johnny;;;;;;;;;;;

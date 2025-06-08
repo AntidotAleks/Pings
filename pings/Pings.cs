@@ -46,6 +46,27 @@ namespace pings
         }
         #endregion
 
+        #region Translation Commands
+        [ConsoleCommand(name: "TranslateSearch", docs: "Searches for terms in the translation file.")]
+        public static string TranslateSearch(string[] args)
+        {
+            if (args.Length == 0)
+                TranslationCheck.TermTreeList();
+            else
+                TranslationCheck.TermSearch(args[0]);
+            return null;
+        }
+        
+        [ConsoleCommand(name: "Translate", docs: "Translates a term from the translation file.")]
+        public static string Translate(string[] args)
+        {
+            if (args.Length == 0)
+                return "Usage: translate <term>";
+            TranslationCheck.Translate(args[0]);
+            return null;
+        }
+        #endregion
+        
         #region Mod activity // PingManager Setup and Cleanup
         private static PingManager _pingManager;
         private static bool _hasPingsMod;
