@@ -97,7 +97,7 @@ namespace pings
                 return;
             }
             
-            var langCsv = Encoding.UTF8.GetString(Pings.mod.GetEmbeddedFileBytes("misc/lang.csv"));
+            var langCsv = Encoding.UTF8.GetString(Pings.mod.GetEmbeddedFileBytes("lang.csv"));
             source.Import_CSV(null, langCsv, eSpreadsheetUpdateMode.Merge, ';');
         }
 

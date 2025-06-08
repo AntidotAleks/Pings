@@ -150,7 +150,7 @@
 <HintPath>C:\Users\Aleks\AppData\Roaming\RaftModLoader\binaries\HMLCoreLibrary.dll</HintPath></Reference>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="misc\lang.csv" />
+    <Content Include="lang.csv" />
     <Content Include="misc\outline.assets" />
   </ItemGroup>
   <PropertyGroup>
