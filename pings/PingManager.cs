@@ -245,9 +245,11 @@ namespace pings
                 => {
                 var t = transformsList[i];
                 var key = KeyString(c.name.Substring("Pickup_Landmark_".Length)); // Remove "Pickup_Landmark_" prefix
-                return TryTranslate("ModPings/Trees/" + key, out var output) ? 
-                    (t, output) : // If translation is found, return it
-                    (t, KeyToCleanString(key)); // If translation is not found, return cleaned key
+                if (TryTranslate("ModPings/Trees/" + key, out var output))
+                    return (t, output);
+                if (Pings.DebugMode >= 1)
+                    Debug.Log($"[Pings: Localization] No translation found for HarvestableTree using key ModPings/Trees/{key}");
+                return (t, KeyToCleanString(key));
             }},
             #endregion
             #region PickupItem
@@ -293,6 +295,20 @@ namespace pings
                 return (t, Translate("Game/TradingPost"));
             }},
             #endregion
+            #region CharacterUnlock
+            { typeof(CharacterUnlock), (transformsList, i, c)
+                => {
+                var t = transformsList[i];
+                var key = KeyString(t.name.Substring("CharacterUnlock_".Length)); // Remove "CharacterUnlock_" prefix
+                if (TryTranslate("ModPings/CharacterUnlock/"+key, out var name))
+                    return (t, name);
+                
+                if (Pings.DebugMode >= 1)
+                    Debug.Log($"[Pings: Localization] No translation found for CharacterUnlock using key ModPings/CharacterUnlock/{key}");
+                
+                return (t, Translate("ModPings/Substring/CharacterUnlock") + KeyToCleanString(key));
+            }},
+            #endregion
             #region Landmark
             { typeof(Landmark), (transformsList, i, c) 
                 => {
@@ -300,33 +316,31 @@ namespace pings
                 var baseName = transformsList[i].name;
                 var path = Path(transformsList[0]);
                 if (path.Contains("/Log"))
-                    return (t,Translate("ModPings/Trees/Log")); // TODO: move to aliases
+                    return (t,Translate("ModPings/Trees/Log")); // I'd move it to localization aliases, but if it works, it works
                 
                 baseName = baseName.Substring(baseName.IndexOf('_') + 1);
                 baseName = Regex.Replace(baseName, @"\d+", ""); // Remove numbers
                 if (baseName == "Raft#Floating raft")
                     return (t, Translate("ModPings/AbandonedRaft"));
+                
                 if (Pings.DebugMode >= 2)
                     Debug.Log($"[Pings: Localization] Landmark \"{baseName}\" is {(LandmarkDictionary.ContainsKey(baseName)?"":"not ")}in the dictionary");
-                if (LandmarkDictionary.TryGetValue(baseName, out var landmarkData) ||
-                    baseName.Contains("Small") || baseName.Contains("Big"))
-                {
-                    if (landmarkData == default) // If Landmark is Small or Big island
-                        landmarkData = (baseName.Contains("Small") ? "Small" : "Big", 1);
-                    
-                    if (TryDeepTranslate("ModPings/Landmark/" + landmarkData.Name, transformsList,
-                        i - landmarkData.Offset, out var output))
-                        return (null, output); // If translation is found
-                    
-                    if (Pings.DebugMode >= 1)
-                        Debug.Log($"[Pings: Localization] No translation found for {landmarkData.Name} Landmark using key ModPings/Landmark/{landmarkData.Name}/" +
-                                  $"{string.Join("/", transformsList.Take(i - landmarkData.Offset + 1).Reverse().Select(tr => KeyString(tr.name)).ToList())} or its parents");
-                    
-                    return (null, CleanString(t.name));
-                }
                 
-                var name = CleanString(t.name).Replace("Character Unlock ", Translate("ModPings/Substring/CharacterUnlock"));
-                return (null, name);
+                if (!LandmarkDictionary.TryGetValue(baseName, out var landmarkData) &&
+                    !baseName.Contains("Small") && !baseName.Contains("Big")) return (null, CleanString(t.name));
+                
+                if (landmarkData == default) // If Landmark is Small or Big island
+                    landmarkData = (baseName.Contains("Small") ? "Small" : "Big", 1);
+                    
+                if (TryDeepTranslate("ModPings/Landmark/" + landmarkData.Name, transformsList,
+                        i - landmarkData.Offset, out var output))
+                    return (null, output); // If translation is found
+                    
+                if (Pings.DebugMode >= 1)
+                    Debug.Log($"[Pings: Localization] No translation found for {landmarkData.Name} Landmark using key ModPings/Landmark/{landmarkData.Name}/" +
+                              $"{string.Join("/", transformsList.Take(i - landmarkData.Offset + 1).Reverse().Select(tr => KeyString(tr.name)).ToList())} or its parents");
+
+                return (null, CleanString(t.name));
             }}
             #endregion
         };
@@ -514,7 +528,7 @@ namespace pings
         #endregion
 
         #region Closest Collider at Hit Point
-        private static readonly Collider[] Colliders = new Collider[128]; // I got 8 colliders in a single ping at most, so 128 should be more than enough
+        private static readonly Collider[] Colliders = new Collider[128];
         public static Transform ClosestCollider(Vector3 worldPos)
         {
             const float radius = 0.05f;
