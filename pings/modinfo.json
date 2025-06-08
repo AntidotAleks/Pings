@@ -2,7 +2,7 @@
   "name": "Pings",
   "author": "Antidot",
   "description": "Adds a ping system to Raft, allowing players to mark locations or items of interest. Mod Extra Settings API gives ability to change ping keybinds and duration.",
-  "version": "1.0",
+  "version": "2.0",
   "license": "GNU AGPLv3",
   "icon": "icon.jpg",
   "banner": "banner.jpg",
@@ -30,10 +30,15 @@
       }
     },
     {
-      "type": "checkbox",
+      "type": "combobox",
       "name": "debugMode",
-      "text": "Enable Logging In The Console",
-      "default": false
+      "text": "Debug Logging Level In Console",
+      "default": "Disabled",
+      "values": [
+        "Disabled",
+        "Normal",
+        "Detailed"
+      ]
     }
   ]
 }

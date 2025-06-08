@@ -1,4 +1,8 @@
-﻿using System.Linq;
+﻿using System.Collections;
+using System.Collections.Generic;
+using System.Linq;
+using System.Text;
+using I2.Loc;
 using UnityEngine;
 using UnityEngine.UI;
 
@@ -6,6 +10,8 @@ namespace pings
 {
     public class Setup : MonoBehaviour
     {
+        
+        
         private static Canvas _canvas;
         
         internal static Canvas CreateCanvas()
@@ -62,7 +68,7 @@ namespace pings
             return pingPrefab;
         }
         
-        public class DiamondShape : MaskableGraphic
+        private class DiamondShape : MaskableGraphic
         {
             protected override void OnPopulateMesh(VertexHelper vh)
             {
@@ -80,6 +86,38 @@ namespace pings
                 vh.AddTriangle(0, 1, 2);
                 vh.AddTriangle(2, 3, 0);
             }
+        }
+
+        internal static void LoadLocalizations()
+        {
+            var source = LocalizationManager.Sources?[0];
+            if (source == null)
+            {
+                Debug.LogError("No language sources found. Should not happen. If happened, skill issue.");
+                return;
+            }
+            
+            var langCsv = Encoding.UTF8.GetString(Pings.mod.GetEmbeddedFileBytes("misc/lang.csv"));
+            source.Import_CSV(null, langCsv, eSpreadsheetUpdateMode.Merge, ';');
+        }
+
+        
+        private static AssetBundle _asset;
+        internal static IEnumerator LoadOutlines()
+        {
+            var request = AssetBundle.LoadFromMemoryAsync(Pings.mod.GetEmbeddedFileBytes("misc/outline.assets"));
+            
+            yield return request;
+            _asset = request.assetBundle;
+            Pings.OutlineMaterial = _asset.LoadAsset<Material>("OutlineMask");
+            Pings.FillMaterial = _asset.LoadAsset<Material>("OutlineFill");
+        }
+
+        internal static void UnloadOutlines()
+        {
+            _asset?.Unload(true);
+            Destroy(Pings.OutlineMaterial);
+            Destroy(Pings.FillMaterial);
         }
     }
 }
