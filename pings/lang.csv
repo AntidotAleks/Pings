@@ -82,3 +82,5 @@ ModPings/QuestInteractable/RelayStationButtonC;Text;ModPings/Alias/RelayStationP
 ModPings/QuestInteractable/RelayStationButtonB;Text;ModPings/Alias/RelayStationPower;;;;;;;;;;;;
 ModPings/Alias/RelayStationPower;Text;;Main power switch;Головний вимикач живлення;;;;;;;;;;
 ModPings/Notes/Map;Text;;Map;Мапа;;;;;;;;;;
+ModPings/Trees/TreeBirch;Text;;Birch;Береза;;;;;;;;;;
+ModPings/Trees/TreePine;Text;;Pine;Сосна;;;;;;;;;;
