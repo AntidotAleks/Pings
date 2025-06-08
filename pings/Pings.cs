@@ -35,37 +35,6 @@ namespace pings
             Log("Mod Pings is loaded!");
         }
 
-        #region Test Commands
-        [ConsoleCommand(name: "g", docs: "g.")]
-        public static string MyCommand(string[] args)
-        {
-            if (args.Length == 0)
-                TestingThings.G();
-            else
-                TestingThings.G(args[0]);
-            return null;
-        }
-        
-        [ConsoleCommand(name: "d", docs: "d.")]
-        public static string MyCommand2(string[] args)
-        {
-            if (args.Length == 0)
-                return "No arguments provided. Usage: g <argument>";
-            TestingThings.D(args[0]);
-            return null;
-        }
-
-        internal static int x = 0;
-        [ConsoleCommand(name: "n", docs: "n.")]
-        public static string MyCommand3(string[] args)
-        {
-            if (args.Length == 0)
-                return "No arguments provided. Usage: n <argument>";
-            x = int.TryParse(args[0], out var value) ? value : 0;
-            return null;
-        }
-        #endregion
-
         public void OnModUnload()
         {
 

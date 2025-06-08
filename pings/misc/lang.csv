@@ -48,3 +48,4 @@ ModPings/Substring/CharacterUnlock;Text;;Character unlock: ;Розблокува
 ModPings/Landmark/Big/Hut;Text;;Hut debris;Залишки хатини;;;;;;;;;;
 ModPings/Landmark/Big/Parabols/Parabol;Text;;Parabolic antenna;Параболічна антена;;;;;;;;;;
 ModPings/Landmark/Big/Hutb;Text;ModPings/Landmark/Big/Hut;;;;;;;;;;;;
+ModPings/Landmark/Big/BigTrees/BigPalm;Text;;Big palm;Велика пальма;;;;;;;;;;

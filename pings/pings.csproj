@@ -42,7 +42,6 @@
     <Compile Include="Pings.cs" />
     <Compile Include="misc\Outline.cs" />
     <Compile Include="misc\Setup.cs" />
-    <Compile Include="TestingThings.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Properties\" />
