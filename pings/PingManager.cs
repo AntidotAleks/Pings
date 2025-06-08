@@ -264,7 +264,13 @@ namespace pings
                         pickupName = Translate("ModPings/Substring/QuestItem") + pickupName;
                         break;
                     case PickupItemType.NoteBookNote:
-                        var tName = item.name;
+                        var itemName = t.name.Substring(t.name.LastIndexOf('_') + 1);
+                        if (TryTranslate("ModPings/Notes/" + itemName, out var noteOutput))
+                            return (t, Translate("ModPings/Substring/Note")+noteOutput);
+                        
+                        if (Pings.DebugMode >= 1)
+                            Debug.Log($"[Pings: Localization] No translation found for Note using key ModPings/Notes/{itemName}");
+                        
                         pickupName = Translate("ModPings/Substring/Note") + CleanString(t.name.Substring(t.name.LastIndexOf('_') + 1));
                         break;
                 }

@@ -81,3 +81,4 @@ ModPings/QuestInteractable/RelayStationButtonA;Text;ModPings/Alias/RelayStationP
 ModPings/QuestInteractable/RelayStationButtonC;Text;ModPings/Alias/RelayStationPower;;;;;;;;;;;;
 ModPings/QuestInteractable/RelayStationButtonB;Text;ModPings/Alias/RelayStationPower;;;;;;;;;;;;
 ModPings/Alias/RelayStationPower;Text;;Main power switch;Головний вимикач живлення;;;;;;;;;;
+ModPings/Notes/Map;Text;;Map;Мапа;;;;;;;;;;
