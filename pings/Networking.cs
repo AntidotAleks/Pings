@@ -41,9 +41,11 @@ namespace pings
 
         internal static void CheckMessages()
         {
+            #region Is message received
             var netMessage = RAPI.ListenForNetworkMessagesOnChannel(Pings.ModChannel);
             if (netMessage == null) return;
             var message = netMessage.message;
+            #endregion
             switch (message.Type)
             {
                 case (Messages)MessageTypes.PingsModIsPresent:
@@ -53,11 +55,13 @@ namespace pings
                     Pings.HasPingsMod = true;
                     break;
                 
+                
                 case (Messages)MessageTypes.PingsModIsRemoved:
                     if (Pings.DebugMode >= 2)
                         Debug.Log("[Pings: Networking] Pings mod was disabled on the server.");
                     Pings.HasPingsMod = false;
                     break;
+                
                 
                 case (Messages)MessageTypes.RequestPingsModStatus:
                     if (Pings.DebugMode >= 2)
@@ -65,9 +69,10 @@ namespace pings
                     RAPI.SendNetworkMessage(new Message((Messages)MessageTypes.PingsModIsPresent), Pings.ModChannel);
                     break;
                 
+                
                 case (Messages)MessageTypes.Ping:
                     if (!(message is PingMessage pingMessage))
-                        break;
+                        break; // Ensure the message is of type PingMessage
                     
                     var senderSteamID = pingMessage.steamID;
                     if (senderSteamID == Pings.SteamID)
@@ -79,15 +84,16 @@ namespace pings
                         RAPI.SendNetworkMessage(new PingMessage(position, senderSteamID), Pings.ModChannel); 
                         // As host, relay ping to all others (someone -> host-self -> everyone)
                     
-                    var hitTransform = CastUtil.ClosestCollider(position);
+                    var hitTransform = CastUtil.ClosestTransform(position); // Find the closest transform to the ping position
                     if (Pings.DebugMode >= 2)
                         Debug.Log($"[Pings: Networking] Received a ping packet at {position} from player {RAPI.GetUsernameFromSteamID(senderSteamID)}.");
                     PingManager.CreatePing(senderSteamID, position, hitTransform);
                     break;
                 
+                
                 default:
                     if (Pings.DebugMode >= 1)
-                    Debug.Log($"[Pings: Networking] Unknown message type received: {netMessage.message.Type}. Is another mod using the same channel ({Pings.ModChannel})?");
+                        Debug.Log($"[Pings: Networking] Unknown message type received: {netMessage.message.Type}. Is another mod using the same channel ({Pings.ModChannel})?");
                     break;
             }
         }

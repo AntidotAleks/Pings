@@ -67,27 +67,24 @@ namespace pings
         }
         #endregion
         
-        #region Mod activity // PingManager Setup and Cleanup
-        private static PingManager _pingManager;
+        #region Is mod enabled
         private static bool _hasPingsMod;
         internal static bool HasPingsMod
         {
+            get => _hasPingsMod;
             set
             {
                 if (_hasPingsMod == value) return;
                 _hasPingsMod = value;
-                if (value)
-                {
-                    _pingManager = new GameObject("PingManager").AddComponent<PingManager>();
-                    DontDestroyOnLoad(_pingManager.gameObject);
-                }
-                else
-                {
-                    PingManager.RemoveAllPings();
-                    Destroy(_pingManager);
-                }
+
+                if (!value) PingManager.RemoveAllPings();
             }
         }
+
+        #endregion
+
+        #region PingManager
+        public void Update() => PingManager.UpdatePings();
         #endregion
 
         #region Networking

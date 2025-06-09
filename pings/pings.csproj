@@ -39,6 +39,7 @@
   <ItemGroup>
     <Compile Include="misc\TranslationCheck.cs" />
     <Compile Include="Networking.cs" />
+    <Compile Include="PingData.cs" />
     <Compile Include="PingManager.cs" />
     <Compile Include="Pings.cs" />
     <Compile Include="misc\Outline.cs" />
