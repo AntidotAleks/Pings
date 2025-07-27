@@ -1,10 +1,11 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics.CodeAnalysis;
 using System.Linq;
+using cakeslice;
 using JetBrains.Annotations;
 using Steamworks;
 using UnityEngine;
-using UnityEngine.UI;
 using static UnityEngine.Object;
 
 namespace pings
@@ -24,11 +25,12 @@ namespace pings
         #region Ping Instance
         private class PingInstance
         {
-            public Transform HitTransform; // Transform of the object hit by the ping
-            public Vector3 LocalPosition; // Relative position of the ping in the hit object's local space
-            public GameObject UIObject; // Visual representation of the ping in the UI
-            public float SpawnTime; // Time when the ping was created, used for expiration
-            [CanBeNull] public Outline Outline; // Outline for the hit object
+            public Transform HitTransform; // Transform of the hit object
+            public Vector3 LocalPosition; // Relative position of the ping to the hit object
+            public GameObject UIObject;
+            public Setup.PingSubObjects SubObjects;
+            public float SpawnTime;
+            [CanBeNull] public Outline Outline;
 
             public Vector3 WorldPosition => HitTransform
                 ? HitTransform.TransformPoint(LocalPosition)
@@ -60,12 +62,9 @@ namespace pings
         {
             foreach (var (_, ping) in ActivePings)
             {
-                var worldPos = ping.WorldPosition;
-                var screenPos = Camera.WorldToScreenPoint(worldPos);
-                if (screenPos.z < 0) screenPos *= -1;
-
                 var rt = ping.UIObject.transform;
-                rt.position = screenPos;
+                rt.position = GetPointPosition(ping, out var worldPos, out var direction);
+                SetPingShape(ping.SubObjects, direction);
 
                 var distance = Vector3.Distance(Camera.transform.position, worldPos);
                 var scale = Mathf.Clamp(1f / distance, 0.1f, 2.5f) * ScaleFactor;
@@ -73,6 +72,91 @@ namespace pings
             }
         }
 
+        #region Ping Position and Shape
+
+        private const int BoundDistance = 170;
+        [SuppressMessage("ReSharper", "CompareOfFloatsByEqualityOperator")]
+        private static Vector3 GetPointPosition(PingInstance ping, out Vector3 worldPos, out Vector3 direction)
+        {
+            worldPos = ping.WorldPosition;
+            var pointPos = Camera.WorldToScreenPoint(worldPos);
+
+            // If point is on the screen
+            
+            var posOnScreen = pointPos;
+            posOnScreen.x = Mathf.Clamp(posOnScreen.x, BoundDistance, Screen.width - BoundDistance);
+            posOnScreen.y = Mathf.Clamp(posOnScreen.y, BoundDistance, Screen.height - BoundDistance);
+            var isOnScreen = pointPos.z > 0 && pointPos.x == posOnScreen.x && pointPos.y == posOnScreen.y;
+
+            ping.SubObjects.textObject.color = new Color(1, 1, 1, isOnScreen ? 1 : 0);
+            if (isOnScreen) 
+            {
+                direction = Vector3.zero;
+                return posOnScreen;
+            }
+            
+            if (pointPos.z < 0) // Fix point position if it's behind the camera
+            {
+                pointPos.x = Screen.width - pointPos.x;
+                pointPos.y = Screen.height - pointPos.y;
+            }
+            
+            var screenCenter = new Vector3(Screen.width / 2f, Screen.height / 2f);
+            pointPos -= screenCenter;
+
+            #region If looking away >90 degrees, move the point to the bottom of the screen
+
+            var angle = Vector3.SignedAngle((worldPos - Camera.transform.position).XZOnly(), Camera.transform.forward.XZOnly(), Vector3.up);
+            var delta = Math.Max(Math.Abs(angle) - 90f, 0) / 90; // Value between 90 and 180 degrees away from point to [0, 1]
+            delta = Mathf.SmoothStep(0, 1, delta);
+            pointPos.Normalize();
+            pointPos *= 1-delta;
+            pointPos += Quaternion.AngleAxis(angle, Vector3.forward) * new Vector3(0, delta, 0);
+
+            #endregion
+
+            #region Move point to the edge of the screen
+            
+            var halfWidth = Screen.width / 2f - BoundDistance;
+            var halfHeight = Screen.height / 2f - BoundDistance;
+
+            var tx = pointPos.x > 0 ? halfWidth / pointPos.x : -halfWidth / pointPos.x;
+            var ty = pointPos.y > 0 ? halfHeight / pointPos.y : -halfHeight / pointPos.y;
+
+            // Use the smallest positive t
+            var t = Mathf.Min(
+                tx > 0 ? tx : float.MaxValue,
+                ty > 0 ? ty : float.MaxValue
+            );
+            #endregion
+            
+            direction = pointPos.normalized;
+            return screenCenter +  pointPos * t;
+        }
+        
+        private static void SetPingShape(Setup.PingSubObjects subobjects, Vector3 direction)
+        {
+            var diamond = subobjects.diamondShape;
+            var arrow = subobjects.arrowShape;
+            var rt = subobjects.rectTransform;
+
+            if (direction == Vector3.zero) // It means the ping is on the screen
+            {
+                diamond.color = Color.white;
+                arrow.color = Color.clear;
+                rt.rotation = Quaternion.Euler(Vector3.up);
+            }
+            else
+            {
+                diamond.color = Color.clear;
+                arrow.color = Color.white;
+                var angle = Mathf.Atan2(direction.x, direction.y) * Mathf.Rad2Deg;
+                rt.rotation = Quaternion.Euler(0, 0, -angle); // Rotate arrow to point in the direction of the ping
+            }
+        }
+
+        #endregion
+        
         private static void CreatePingIfKeyPressed()
         {
             if (!Input.GetKeyDown(Pings.PingKey.MainKey) && !Input.GetKeyDown(Pings.PingKey.AltKey)) return; // On key press only
@@ -86,6 +170,7 @@ namespace pings
             RAPI.SendNetworkMessage(p, Pings.ModChannel); // Send ping to other players
             CreatePing(Pings.SteamID, worldPos, CastUtil.ClosestTransform(worldPos)); 
         }
+
         #endregion
 
         #region Ping Creation and Removal
@@ -98,17 +183,19 @@ namespace pings
             var (pingName, transformForOutline) = PingData.GetFrom(hitTransform, worldPos);
 
             // Create ping
-            var pingUI = Instantiate(_pingPrefab, _canvas.transform);
-            pingUI.SetActive(true);
-            pingUI.GetComponentInChildren<Text>().text = pingName;
+            var pingObject = Instantiate(_pingPrefab, _canvas.transform);
+            var subObjects = pingObject.GetComponent<Setup.PingSubObjects>();
+            pingObject.SetActive(true);
+            subObjects.textObject.text = pingName;
             
             // Add outline to the hit object or return existing outline on that object. Returns null if transform == null, AKA no outline is needed
             var outline = CreateOutline(transformForOutline);
             ActivePings[steamID] = new PingInstance
             {
-                HitTransform = /*pingTransform ?? */hitTransform,
-                LocalPosition = (/*pingTransform ?? */hitTransform) ? (/*pingTransform ?? */hitTransform).InverseTransformPoint(worldPos) : worldPos,
-                UIObject = pingUI,
+                HitTransform = hitTransform,
+                LocalPosition = hitTransform ? hitTransform.InverseTransformPoint(worldPos) : worldPos,
+                UIObject = pingObject,
+                SubObjects = subObjects,
                 SpawnTime = Time.time,
                 Outline = outline
             };
@@ -135,10 +222,16 @@ namespace pings
                 var outline = GetOutlineOfPingFromActive(target);
                 if (outline)
                     return outline; // If outline already exists for this object, return it
-            
-                outline = target.gameObject.AddComponent<Outline>();
-                outline.OutlineColor = Color.yellow;
-                outline.OutlineWidth = 7f;
+                
+                outline = Pings.isFancyOutline ? (Outline) 
+                    target.gameObject.AddComponent<FancyOutline>() : 
+                    target.gameObject.AddComponent<QuickOutline>();
+                
+                if (outline is QuickOutline qo)
+                {
+                    qo.OutlineColor = Color.yellow;
+                    qo.OutlineWidth = 7f;
+                }
                 outline.enabled = true;
             
                 return outline;

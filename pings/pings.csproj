@@ -39,10 +39,14 @@
   <ItemGroup>
     <Compile Include="misc\TranslationCheck.cs" />
     <Compile Include="Networking.cs" />
+    <Compile Include="outlines\fancy\FancyOutline.cs" />
+    <Compile Include="outlines\fancy\FOCamera.cs" />
+    <Compile Include="outlines\fancy\FOLinkedSet.cs" />
+    <Compile Include="outlines\Outline.cs" />
+    <Compile Include="outlines\quick\QuickOutline.cs" />
     <Compile Include="PingData.cs" />
     <Compile Include="PingManager.cs" />
     <Compile Include="Pings.cs" />
-    <Compile Include="misc\Outline.cs" />
     <Compile Include="misc\Setup.cs" />
   </ItemGroup>
   <ItemGroup>
@@ -152,7 +156,8 @@
   </ItemGroup>
   <ItemGroup>
     <Content Include="lang.csv" />
-    <Content Include="misc\outline.assets" />
+    <Content Include="outlines\fancy\outline.assets" />
+    <Content Include="outlines\quick\outline.assets" />
   </ItemGroup>
   <PropertyGroup>
     <PreBuildEvent>

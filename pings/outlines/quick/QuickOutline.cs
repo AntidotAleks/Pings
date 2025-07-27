@@ -15,7 +15,7 @@ namespace pings
 {
   [DisallowMultipleComponent]
 
-  public class Outline : MonoBehaviour {
+  public class QuickOutline : Outline {
     private static HashSet<Mesh> registeredMeshes = new HashSet<Mesh>();
 
     public enum Mode {

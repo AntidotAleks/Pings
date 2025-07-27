@@ -41,7 +41,7 @@ namespace pings
 
         internal static void CheckMessages()
         {
-            #region Is message received
+            #region When message received
             var netMessage = RAPI.ListenForNetworkMessagesOnChannel(Pings.ModChannel);
             if (netMessage == null) return;
             var message = netMessage.message;
@@ -76,7 +76,7 @@ namespace pings
                     
                     var senderSteamID = pingMessage.steamID;
                     if (senderSteamID == Pings.SteamID)
-                        return;
+                        break;
                         // Ignore relayed own pings (self -> host -> self)
 
                     var position = pingMessage.Position();

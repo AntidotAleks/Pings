@@ -4,9 +4,11 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
 using System.Text;
+using cakeslice;
 using HMLLibrary;
 using RaftModLoader;
 using Steamworks;
+using UltimateWater;
 using UnityEngine;
 
 namespace pings
@@ -22,6 +24,7 @@ namespace pings
         
         // Materials for outlines
         internal static Material OutlineMaterial, FillMaterial;
+        internal static Shader OutlineShader, OutlineBufferShader;
 
         #region Mod Loading / Unloading
         public IEnumerator Start()
@@ -63,6 +66,25 @@ namespace pings
             if (args.Length == 0)
                 return "Usage: translate <term>";
             TranslationCheck.Translate(args[0]);
+            return null;
+        }
+
+        public static bool isFancyOutline;
+        [ConsoleCommand(name: "switchOutline", docs: "e")]
+        public static string SwitchOutline(string[] args)
+        {
+            isFancyOutline = !isFancyOutline;
+            var camera = Camera.main ?? Camera.current;
+            
+            if (isFancyOutline)
+            {
+                camera.gameObject.AddComponent<FOCamera>();
+            }
+            else
+            {
+                camera.gameObject.GetComponent<FOCamera>()?.Destroy();
+            }
+            
             return null;
         }
         #endregion
