@@ -2,7 +2,6 @@
 using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
-using cakeslice;
 using JetBrains.Annotations;
 using Steamworks;
 using UnityEngine;
@@ -223,15 +222,10 @@ namespace pings
                 if (outline)
                     return outline; // If outline already exists for this object, return it
                 
-                outline = Pings.isFancyOutline ? (Outline) 
-                    target.gameObject.AddComponent<FancyOutline>() : 
-                    target.gameObject.AddComponent<QuickOutline>();
+                outline = target.gameObject.AddComponent<Outline>();
                 
-                if (outline is QuickOutline qo)
-                {
-                    qo.OutlineColor = Color.yellow;
-                    qo.OutlineWidth = 7f;
-                }
+                outline.OutlineColor = Color.yellow;
+                outline.OutlineWidth = 7f;
                 outline.enabled = true;
             
                 return outline;

@@ -147,43 +147,26 @@ namespace pings
         }
 
         
-        private static AssetBundle _assetQuick, _assetFancy;
+        private static AssetBundle _asset;
         internal static IEnumerator LoadOutlines()
         {
-            #region Quick Outline
+            // Quick Outline
             // https://assetstore.unity.com/packages/tools/particles-effects/quick-outline-115488
             
-            var request = AssetBundle.LoadFromMemoryAsync(Pings.mod.GetEmbeddedFileBytes("outlines/quick/outline.assets"));
+            var request = AssetBundle.LoadFromMemoryAsync(Pings.mod.GetEmbeddedFileBytes("misc/outline.assets"));
             yield return request;
             
-            _assetQuick = request.assetBundle;
-            Pings.OutlineMaterial = _assetQuick.LoadAsset<Material>("OutlineMask");
-            Pings.FillMaterial = _assetQuick.LoadAsset<Material>("OutlineFill");
+            _asset = request.assetBundle;
+            Pings.OutlineMaterial = _asset.LoadAsset<Material>("OutlineMask");
+            Pings.FillMaterial = _asset.LoadAsset<Material>("OutlineFill");
 
-            #endregion
-
-            #region Fancy Outline
-            // https://assetstore.unity.com/packages/vfx/shaders/fullscreen-camera-effects/outline-effect-78608
-            
-            var request2 = AssetBundle.LoadFromMemoryAsync(Pings.mod.GetEmbeddedFileBytes("outlines/fancy/outline.assets"));
-            yield return request2;
-
-            _assetFancy = request2.assetBundle;
-            Pings.OutlineShader = _assetFancy.LoadAsset<Shader>("OutlineShader");
-            Pings.OutlineBufferShader = _assetFancy.LoadAsset<Shader>("OutlineBufferShader");
-
-            #endregion
         }
 
         internal static void UnloadOutlines()
         {
-            _assetQuick?.Unload(true);
+            _asset?.Unload(true);
             Destroy(Pings.OutlineMaterial);
             Destroy(Pings.FillMaterial);
-            
-            _assetFancy?.Unload(true);
-            Destroy(Pings.OutlineShader);
-            Destroy(Pings.OutlineBufferShader);
         }
     }
 }
