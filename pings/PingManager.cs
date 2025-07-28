@@ -4,7 +4,9 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using cakeslice;
 using JetBrains.Annotations;
+using Sirenix.Utilities;
 using Steamworks;
+using UltimateWater;
 using UnityEngine;
 using static UnityEngine.Object;
 
@@ -30,7 +32,7 @@ namespace pings
             public GameObject UIObject;
             public Setup.PingSubObjects SubObjects;
             public float SpawnTime;
-            [CanBeNull] public Outline Outline;
+            [CanBeNull] public Outline[] Outlines;
 
             public Vector3 WorldPosition => HitTransform
                 ? HitTransform.TransformPoint(LocalPosition)
@@ -189,7 +191,7 @@ namespace pings
             subObjects.textObject.text = pingName;
             
             // Add outline to the hit object or return existing outline on that object. Returns null if transform == null, AKA no outline is needed
-            var outline = CreateOutline(transformForOutline);
+            var outlines = CreateOutline(transformForOutline);
             ActivePings[steamID] = new PingInstance
             {
                 HitTransform = hitTransform,
@@ -197,7 +199,7 @@ namespace pings
                 UIObject = pingObject,
                 SubObjects = subObjects,
                 SpawnTime = Time.time,
-                Outline = outline
+                Outlines = outlines
             };
         }
         
@@ -205,34 +207,28 @@ namespace pings
         {
             if (!ActivePings.Remove(steamID, out var ping)) return; // If ping doesn't exist, do nothing
             Destroy(ping.UIObject);
-            
-            if (ping.Outline && !GetOutlineOfPingFromActive(ping.HitTransform))
+
+            if (ping.Outlines != null)
+                Debug.Log("Size of outlines: " + ping.Outlines.Length);
+            if (ping.Outlines != null && GetOutlineOfPingFromActive(ping.HitTransform) == null)
                 // Since ping is removed from active, #GetOutlineOfPingFromActive will return true only if the outline is still present on other pings
-                DestroyImmediate(ping.Outline); // Need to use DestroyImmediate since right after that #CreateOutline will check for outlines
+                ping.Outlines.ForEach(DestroyImmediate); // Need to use DestroyImmediate since right after that CreateOutline will check for existing outlines
         }
         #endregion
 
         #region Outlines
         [CanBeNull]
-        private static Outline CreateOutline(Transform target)
+        private static Outline[] CreateOutline(Transform target)
         {
             if (!target) return null;
 
             try {
                 var outline = GetOutlineOfPingFromActive(target);
-                if (outline)
+                if (outline != null)
                     return outline; // If outline already exists for this object, return it
+
+                outline = AddOutline(target, Pings.Style);
                 
-                outline = Pings.isFancyOutline ? (Outline) 
-                    target.gameObject.AddComponent<FancyOutline>() : 
-                    target.gameObject.AddComponent<QuickOutline>();
-                
-                if (outline is QuickOutline qo)
-                {
-                    qo.OutlineColor = Color.yellow;
-                    qo.OutlineWidth = 7f;
-                }
-                outline.enabled = true;
             
                 return outline;
             }
@@ -243,9 +239,34 @@ namespace pings
             }
         }
         
-        private static Outline GetOutlineOfPingFromActive(Transform pingTransform)
+        private static Outline[] GetOutlineOfPingFromActive(Transform pingTransform)
         {
-            return ActivePings.FirstOrDefault(pair => pair.Value.HitTransform == pingTransform).Value?.Outline;
+            return ActivePings.FirstOrDefault(pair => pair.Value.HitTransform == pingTransform).Value?.Outlines;
+        }
+
+        private static Outline[] AddOutline(Transform target, Pings.OutlineStyle style)
+        {
+            switch (style)
+            {
+                case Pings.OutlineStyle.QUICK:
+                    return new Outline[]{target.gameObject.AddComponent<QuickOutline>()};
+                case Pings.OutlineStyle.FANCY:
+                    var renderers = target.GetComponentsInChildren<Renderer>();
+                    while (renderers.Length == 0)
+                    {
+                        if (!target.parent) return null;
+                        target = target.parent;
+                        target.GetComponentsInChildren<Renderer>();
+                    }
+
+                    var fancyOutlines = new Outline[renderers.Length];
+                    foreach (var renderer in renderers)
+                        renderer.gameObject.AddComponent<FancyOutline>();
+            
+                    return fancyOutlines;
+                default:
+                    throw new ArgumentOutOfRangeException(nameof(style), style, null);
+            }
         }
         #endregion
 
@@ -262,6 +283,9 @@ namespace pings
             RemoveAllPings();
             if (_canvas) Destroy(_canvas.gameObject);
             if (_pingPrefab) Destroy(_pingPrefab);
+            
+            var camera = Camera.main ?? Camera.current;
+            camera.gameObject.GetComponent<FOCamera>()?.Destroy();
         }
         
         public static void RemoveAllPings()

@@ -47,25 +47,23 @@ namespace cakeslice
 		private readonly FOLinkedSet<FancyOutline> outlines = new FOLinkedSet<FancyOutline>();
 
 		[Range(1.0f, 6.0f)]
-		public float lineThickness = 1.25f;
+		public float lineThickness = 1.5f;
 		[Range(0, 10)]
-		public float lineIntensity = .5f;
+		public float lineIntensity = 1f;
 		[Range(0, 1)]
-		public float fillAmount = 0.2f;
+		public float fillAmount = 0f;
 
-		public Color lineColor0 = Color.red;
-		public Color lineColor1 = Color.green;
-		public Color lineColor2 = Color.blue;
+		public Color lineColor = Pings.OutlineColor;
 
 		public bool additiveRendering = false;
 
 		public bool backfaceCulling = true;
 
-		public Color fillColor = Color.blue;
+		public Color fillColor = Pings.OutlineColor;
 		public bool useFillColor = false;
 
 		[Header("These settings can affect performance!")]
-		public bool cornerOutlines = false;
+		public bool cornerOutlines = true;
 		public bool addLinesBetweenColors = false;
 
 		[Header("Advanced settings")]
@@ -78,9 +76,7 @@ namespace cakeslice
 
 		[HideInInspector]
 		public Camera outlineCamera;
-		Material outline1Material;
-		Material outline2Material;
-		Material outline3Material;
+		Material outlineMaterial;
 		Material outlineEraseMaterial;
 		Shader outlineShader => Pings.OutlineShader;
 		Shader outlineBufferShader => Pings.OutlineBufferShader;
@@ -95,14 +91,7 @@ namespace cakeslice
 
 		Material GetMaterialFromID(int ID)
 		{
-			if (ID == 0)
-				return outline1Material;
-			else if (ID == 1)
-				return outline2Material;
-			else if (ID == 2)
-				return outline3Material;
-			else
-				return outline1Material;
+			return outlineMaterial;
 		}
 		List<Material> materialBuffer = new List<Material>();
 		Material CreateMaterial(Color emissionColor)
@@ -326,40 +315,30 @@ namespace cakeslice
 		[ImageEffectOpaque]
 		void OnRenderImage(RenderTexture source, RenderTexture destination)
 		{
-			if (outlineShaderMaterial != null)
-			{
-				outlineShaderMaterial.SetTexture("_OutlineSource", renderTexture);
+			if (!outlineShaderMaterial) return;
+			outlineShaderMaterial.SetTexture("_OutlineSource", renderTexture);
 
-				if (addLinesBetweenColors)
-				{
-					Graphics.Blit(source, extraRenderTexture, outlineShaderMaterial, 0);
-					outlineShaderMaterial.SetTexture("_OutlineSource", extraRenderTexture);
-				}
-				Graphics.Blit(source, destination, outlineShaderMaterial, 1);
+			if (addLinesBetweenColors)
+			{
+				Graphics.Blit(source, extraRenderTexture, outlineShaderMaterial, 0);
+				outlineShaderMaterial.SetTexture("_OutlineSource", extraRenderTexture);
 			}
+			Graphics.Blit(source, destination, outlineShaderMaterial, 1);
 		}
 
 		private void CreateMaterialsIfNeeded()
 		{
-			// if (outlineShader == null)
-			// 	outlineShader = Pings.OutlineShader;
-			// if (outlineBufferShader == null)
-			// 	outlineBufferShader = Pings.OutlineBufferShader;
-			
 			if (outlineShaderMaterial == null)
 			{
-				outlineShaderMaterial = new Material(outlineShader);
-				outlineShaderMaterial.hideFlags = HideFlags.HideAndDontSave;
+				outlineShaderMaterial = new Material(outlineShader) {
+					hideFlags = HideFlags.HideAndDontSave
+				};
 				UpdateMaterialsPublicProperties();
 			}
 			if (outlineEraseMaterial == null)
 				outlineEraseMaterial = CreateMaterial(new Color(0, 0, 0, 0));
-			if (outline1Material == null)
-				outline1Material = CreateMaterial(new Color(1, 0, 0, 0));
-			if (outline2Material == null)
-				outline2Material = CreateMaterial(new Color(0, 1, 0, 0));
-			if (outline3Material == null)
-				outline3Material = CreateMaterial(new Color(0, 0, 1, 0));
+			if (outlineMaterial == null)
+				outlineMaterial = CreateMaterial(lineColor);
 		}
 
 		private void DestroyMaterials()
@@ -369,78 +348,56 @@ namespace cakeslice
 			materialBuffer.Clear();
 			DestroyImmediate(outlineShaderMaterial);
 			DestroyImmediate(outlineEraseMaterial);
-			DestroyImmediate(outline1Material);
-			DestroyImmediate(outline2Material);
-			DestroyImmediate(outline3Material);
-			// outlineShader = null;
-			// outlineBufferShader = null;
+			DestroyImmediate(outlineMaterial);
 			outlineShaderMaterial = null;
 			outlineEraseMaterial = null;
-			outline1Material = null;
-			outline2Material = null;
-			outline3Material = null;
+			outlineMaterial = null;
 		}
 
 		public void UpdateMaterialsPublicProperties()
 		{
-			if (outlineShaderMaterial)
+			if (!outlineShaderMaterial) return;
+			float scalingFactor = 1;
+			if (scaleWithScreenSize)
+				scalingFactor = Screen.height / 360.0f; // If Screen.height gets bigger, outlines gets thicker
+
+			// If scaling is too small (height less than 360 pixels), make sure you still render the outlines, but render them with 1 thickness
+			if (scaleWithScreenSize && scalingFactor < 1)
 			{
-				float scalingFactor = 1;
-				if (scaleWithScreenSize)
+				if (UnityEngine.XR.XRSettings.isDeviceActive && sourceCamera.stereoTargetEye != StereoTargetEyeMask.None)
 				{
-					// If Screen.height gets bigger, outlines gets thicker
-					scalingFactor = Screen.height / 360.0f;
-				}
-
-				// If scaling is too small (height less than 360 pixels), make sure you still render the outlines, but render them with 1 thickness
-				if (scaleWithScreenSize && scalingFactor < 1)
-				{
-					if (UnityEngine.XR.XRSettings.isDeviceActive && sourceCamera.stereoTargetEye != StereoTargetEyeMask.None)
-					{
-						outlineShaderMaterial.SetFloat("_LineThicknessX", (1 / 1000.0f) * (1.0f / UnityEngine.XR.XRSettings.eyeTextureWidth) * 1000.0f);
-						outlineShaderMaterial.SetFloat("_LineThicknessY", (1 / 1000.0f) * (1.0f / UnityEngine.XR.XRSettings.eyeTextureHeight) * 1000.0f);
-					}
-					else
-					{
-						outlineShaderMaterial.SetFloat("_LineThicknessX", (1 / 1000.0f) * (1.0f / Screen.width) * 1000.0f);
-						outlineShaderMaterial.SetFloat("_LineThicknessY", (1 / 1000.0f) * (1.0f / Screen.height) * 1000.0f);
-					}
+					outlineShaderMaterial.SetFloat("_LineThicknessX", (1 / 1000.0f) * (1.0f / UnityEngine.XR.XRSettings.eyeTextureWidth) * 1000.0f);
+					outlineShaderMaterial.SetFloat("_LineThicknessY", (1 / 1000.0f) * (1.0f / UnityEngine.XR.XRSettings.eyeTextureHeight) * 1000.0f);
 				}
 				else
 				{
-					if (UnityEngine.XR.XRSettings.isDeviceActive && sourceCamera.stereoTargetEye != StereoTargetEyeMask.None)
-					{
-						outlineShaderMaterial.SetFloat("_LineThicknessX", scalingFactor * (lineThickness / 1000.0f) * (1.0f / UnityEngine.XR.XRSettings.eyeTextureWidth) * 1000.0f);
-						outlineShaderMaterial.SetFloat("_LineThicknessY", scalingFactor * (lineThickness / 1000.0f) * (1.0f / UnityEngine.XR.XRSettings.eyeTextureHeight) * 1000.0f);
-					}
-					else
-					{
-						outlineShaderMaterial.SetFloat("_LineThicknessX", scalingFactor * (lineThickness / 1000.0f) * (1.0f / Screen.width) * 1000.0f);
-						outlineShaderMaterial.SetFloat("_LineThicknessY", scalingFactor * (lineThickness / 1000.0f) * (1.0f / Screen.height) * 1000.0f);
-					}
+					outlineShaderMaterial.SetFloat("_LineThicknessX", (1 / 1000.0f) * (1.0f / Screen.width) * 1000.0f);
+					outlineShaderMaterial.SetFloat("_LineThicknessY", (1 / 1000.0f) * (1.0f / Screen.height) * 1000.0f);
 				}
-				outlineShaderMaterial.SetFloat("_LineIntensity", lineIntensity);
-				outlineShaderMaterial.SetFloat("_FillAmount", fillAmount);
-				outlineShaderMaterial.SetColor("_FillColor", fillColor);
-				outlineShaderMaterial.SetFloat("_UseFillColor", useFillColor ? 1 : 0);
-				outlineShaderMaterial.SetColor("_LineColor1", lineColor0 * lineColor0);
-				outlineShaderMaterial.SetColor("_LineColor2", lineColor1 * lineColor1);
-				outlineShaderMaterial.SetColor("_LineColor3", lineColor2 * lineColor2);
-				if (flipY)
-					outlineShaderMaterial.SetInt("_FlipY", 1);
-				else
-					outlineShaderMaterial.SetInt("_FlipY", 0);
-				if (!additiveRendering)
-					outlineShaderMaterial.SetInt("_Dark", 1);
-				else
-					outlineShaderMaterial.SetInt("_Dark", 0);
-				if (cornerOutlines)
-					outlineShaderMaterial.SetInt("_CornerOutlines", 1);
-				else
-					outlineShaderMaterial.SetInt("_CornerOutlines", 0);
-
-				Shader.SetGlobalFloat("_OutlineAlphaCutoff", alphaCutoff);
 			}
+			else
+			{
+				if (UnityEngine.XR.XRSettings.isDeviceActive && sourceCamera.stereoTargetEye != StereoTargetEyeMask.None)
+				{
+					outlineShaderMaterial.SetFloat("_LineThicknessX", scalingFactor * (lineThickness / 1000.0f) * (1.0f / UnityEngine.XR.XRSettings.eyeTextureWidth) * 1000.0f);
+					outlineShaderMaterial.SetFloat("_LineThicknessY", scalingFactor * (lineThickness / 1000.0f) * (1.0f / UnityEngine.XR.XRSettings.eyeTextureHeight) * 1000.0f);
+				}
+				else
+				{
+					outlineShaderMaterial.SetFloat("_LineThicknessX", scalingFactor * (lineThickness / 1000.0f) * (1.0f / Screen.width) * 1000.0f);
+					outlineShaderMaterial.SetFloat("_LineThicknessY", scalingFactor * (lineThickness / 1000.0f) * (1.0f / Screen.height) * 1000.0f);
+				}
+			}
+			outlineShaderMaterial.SetFloat("_LineIntensity", lineIntensity);
+			outlineShaderMaterial.SetFloat("_FillAmount", fillAmount);
+			outlineShaderMaterial.SetColor("_FillColor", fillColor);
+			outlineShaderMaterial.SetFloat("_UseFillColor", useFillColor ? 1 : 0);
+			outlineShaderMaterial.SetColor("_LineColor1", lineColor * lineColor);
+			outlineShaderMaterial.SetInt("_FlipY", flipY ? 1 : 0);
+			outlineShaderMaterial.SetInt("_Dark", !additiveRendering ? 1 : 0);
+			outlineShaderMaterial.SetInt("_CornerOutlines", cornerOutlines ? 1 : 0);
+
+			Shader.SetGlobalFloat("_OutlineAlphaCutoff", alphaCutoff);
 		}
 
 		void UpdateOutlineCameraFromSource()
@@ -456,10 +413,8 @@ namespace cakeslice
             outlineCamera.allowHDR = false;
 		}
 
-		public void AddOutline(FancyOutline outline)
-			 => outlines.Add(outline);
+		public void AddOutline(FancyOutline outline) => outlines.Add(outline);
 
-		public void RemoveOutline(FancyOutline outline)
-			 => outlines.Remove(outline);
+		public void RemoveOutline(FancyOutline outline) => outlines.Remove(outline);
 	}
 }

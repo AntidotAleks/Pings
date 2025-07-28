@@ -23,8 +23,13 @@ namespace pings
         internal static CSteamID SteamID => RAPI.GetLocalPlayer().steamID;
         
         // Materials for outlines
+        public static OutlineStyle Style = OutlineStyle.QUICK;
+        
         internal static Material OutlineMaterial, FillMaterial;
         internal static Shader OutlineShader, OutlineBufferShader;
+
+        internal static readonly Color OutlineColor = Color.yellow;
+
 
         #region Mod Loading / Unloading
         public IEnumerator Start()
@@ -69,22 +74,25 @@ namespace pings
             return null;
         }
 
-        public static bool isFancyOutline;
         [ConsoleCommand(name: "switchOutline", docs: "e")]
         public static string SwitchOutline(string[] args)
         {
-            isFancyOutline = !isFancyOutline;
+            PingManager.RemoveAllPings();
             var camera = Camera.main ?? Camera.current;
             
-            if (isFancyOutline)
+            switch (Style)
             {
-                camera.gameObject.AddComponent<FOCamera>();
-            }
-            else
-            {
-                camera.gameObject.GetComponent<FOCamera>()?.Destroy();
+                case OutlineStyle.QUICK:
+                    Style = OutlineStyle.FANCY;
+                    camera.gameObject.AddComponent<FOCamera>();
+                    break;
+                case OutlineStyle.FANCY:
+                    Style = OutlineStyle.QUICK;
+                    camera.gameObject.GetComponent<FOCamera>()?.Destroy();
+                    break;
             }
             
+            Debug.Log($"Switched outline style to {Style}");
             return null;
         }
         #endregion
@@ -149,5 +157,11 @@ namespace pings
         public static int ExtraSettingsAPI_GetComboboxSelectedIndex(string SettingName) => -1;
         
         #endregion
+        
+        public enum OutlineStyle
+        {
+            QUICK,
+            FANCY
+        }
     }
 }

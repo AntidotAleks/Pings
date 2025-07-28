@@ -59,10 +59,10 @@ namespace pings
     private Mode outlineMode;
 
     [SerializeField]
-    private Color outlineColor = Color.white;
+    private Color outlineColor = Pings.OutlineColor;
 
     [SerializeField, Range(0f, 10f)]
-    private float outlineWidth = 2f;
+    private float outlineWidth = 7f;
 
     [Header("Optional")]
 

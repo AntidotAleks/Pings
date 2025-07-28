@@ -57,6 +57,7 @@ namespace cakeslice
 		void OnDisable()
 		{
 			FOCamera.Instance?.RemoveOutline(this);
+			Debug.Log("Called OnDisable for " + gameObject.name);
 		}
 
 		private Material[] _SharedMaterials;
