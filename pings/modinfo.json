@@ -15,13 +15,13 @@
     {
       "type": "keybind",
       "name": "pingKeybind",
-      "text": "Ping Keybind",
+      "text": "Keybind to Ping",
       "mainDefault": "Mouse2"
     },
     {
       "type": "keybind",
       "name": "clearPingsKeybind",
-      "text": "Clear All Existing Pings Keybind"
+      "text": "Keybind to Clear All Existing Pings"
     },
     {
       "type": "slider",
