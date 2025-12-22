@@ -39,12 +39,18 @@ namespace pings
                 : LocalPosition;
         }
         #endregion
-        
+
+        public static int EGegG = 0;
         #region Pings Update
         internal static void UpdatePings()
         {
             if (!Pings.HasPingsMod || !RAPI.IsCurrentSceneGame()) return; // Only in game
-
+            if (Input.GetKeyDown(KeyCode.H))
+            {
+                ++EGegG;
+                EGegG %= 32;
+                Debug.Log(EGegG);
+            }
             RemoveOldPings();
             UpdatePingPositions();
             CreatePingIfKeyPressed();
@@ -210,6 +216,7 @@ namespace pings
 
             if (ping.Outlines != null)
                 Debug.Log("Size of outlines: " + ping.Outlines.Length);
+            
             if (ping.Outlines != null && GetOutlineOfPingFromActive(ping.HitTransform) == null)
                 // Since ping is removed from active, #GetOutlineOfPingFromActive will return true only if the outline is still present on other pings
                 ping.Outlines.ForEach(DestroyImmediate); // Need to use DestroyImmediate since right after that CreateOutline will check for existing outlines
@@ -217,57 +224,51 @@ namespace pings
         #endregion
 
         #region Outlines
-        [CanBeNull]
         private static Outline[] CreateOutline(Transform target)
         {
             if (!target) return null;
-
-            try {
-                var outline = GetOutlineOfPingFromActive(target);
-                if (outline != null)
-                    return outline; // If outline already exists for this object, return it
-
-                outline = AddOutline(target, Pings.Style);
-                
             
-                return outline;
+            try 
+            {
+                return GetOutlineOfPingFromActive(target) ?? AddOutline(Pings.Style);
             }
             catch (Exception e)
             {
                 Debug.LogError($"[Pings: Handling] Error creating outline for {target.name}: {e.Message}");
                 return null;
             }
-        }
-        
-        private static Outline[] GetOutlineOfPingFromActive(Transform pingTransform)
-        {
-            return ActivePings.FirstOrDefault(pair => pair.Value.HitTransform == pingTransform).Value?.Outlines;
-        }
-
-        private static Outline[] AddOutline(Transform target, Pings.OutlineStyle style)
-        {
-            switch (style)
-            {
-                case Pings.OutlineStyle.QUICK:
-                    return new Outline[]{target.gameObject.AddComponent<QuickOutline>()};
-                case Pings.OutlineStyle.FANCY:
-                    var renderers = target.GetComponentsInChildren<Renderer>();
-                    while (renderers.Length == 0)
-                    {
-                        if (!target.parent) return null;
-                        target = target.parent;
-                        target.GetComponentsInChildren<Renderer>();
-                    }
-
-                    var fancyOutlines = new Outline[renderers.Length];
-                    foreach (var renderer in renderers)
-                        renderer.gameObject.AddComponent<FancyOutline>();
             
-                    return fancyOutlines;
-                default:
-                    throw new ArgumentOutOfRangeException(nameof(style), style, null);
+            Outline[] AddOutline(Pings.OutlineStyle style)
+            {
+                switch (style)
+                {
+                    case Pings.OutlineStyle.QUICK:
+                        return new Outline[]{target.gameObject.AddComponent<QuickOutline>()};
+                    case Pings.OutlineStyle.FANCY:
+                        var renderers = target.GetComponentsInChildren<Renderer>();
+                        while (renderers.Length == 0)
+                        {
+                            if (!target.parent) return null;
+                            target = target.parent;
+                            target.GetComponentsInChildren<Renderer>();
+                        }
+
+                        var fancyOutlines = new Outline[renderers.Length];
+                        for (var index = 0; index < renderers.Length; index++)
+                            fancyOutlines[index] = renderers[index].gameObject.AddComponent<FancyOutline>();
+                        
+                        return fancyOutlines;
+                    default:
+                        throw new ArgumentOutOfRangeException(nameof(style), style, null);
+                }
             }
         }
+        
+        [CanBeNull]
+        private static Outline[] GetOutlineOfPingFromActive(Transform pingTransform) => 
+            ActivePings.FirstOrDefault(pair => pair.Value.HitTransform == pingTransform).Value?.Outlines;
+        
+
         #endregion
 
         #region Setup and Cleanup

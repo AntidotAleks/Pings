@@ -3,7 +3,7 @@ using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using System.Runtime.CompilerServices;
-using System.Text;
+using HarmonyLib;
 using cakeslice;
 using HMLLibrary;
 using RaftModLoader;
@@ -21,6 +21,7 @@ namespace pings
         internal static Mod mod;
         internal const int ModChannel = 4571607; // Channel for mod messages
         internal static CSteamID SteamID => RAPI.GetLocalPlayer().steamID;
+        private static Harmony _harmony;
         
         // Materials for outlines
         public static OutlineStyle Style = OutlineStyle.QUICK;
@@ -39,16 +40,20 @@ namespace pings
             yield return Setup.LoadOutlines();
             Networking.OnLoad();
             PingManager.Setup();
+            (_harmony = new Harmony("me.antidot.pingsmod")).PatchAll();
             
             Log("Mod Pings is loaded!");
+            
+            SwitchOutline(Array.Empty<string>());
         }
 
         public void OnModUnload()
         {
 
+            Setup.UnloadOutlines();
             Networking.OnUnload();
             PingManager.Cleanup();
-            Setup.UnloadOutlines();
+            _harmony.UnpatchAll("me.antidot.pingsmod");
             
             Log("Mod Pings is unloaded.");
         }
@@ -95,7 +100,20 @@ namespace pings
             Debug.Log($"Switched outline style to {Style}");
             return null;
         }
+
+        private static int cullMask = (Camera.main ?? Camera.current).cullingMask;
+        [ConsoleCommand(name: "ray", docs: "d")]
+        public static string Ray(string[] args)
+        {
+            var camera = (Camera.main ?? Camera.current).gameObject;
+            
+            Debug.Log(camera.GetComponents<MonoBehaviour>().Select(mb => mb.GetType().Name).Aggregate((current, next) => $"{current}, {next}"));
+            var waterCamera = camera.GetComponent<WaterCamera>();
+            
+            return null;
+        }
         #endregion
+        
         
         #region Is mod enabled
         private static bool _hasPingsMod;

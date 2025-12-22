@@ -49,27 +49,11 @@ namespace cakeslice
 			MeshFilter = GetComponent<MeshFilter>();
 		}
 
-		void OnEnable()
-		{
-			FOCamera.Instance?.AddOutline(this);
-		}
+		private void OnEnable() => FOCamera.Instance?.AddOutline(this);
 
-		void OnDisable()
-		{
-			FOCamera.Instance?.RemoveOutline(this);
-			Debug.Log("Called OnDisable for " + gameObject.name);
-		}
+		private void OnDisable() => FOCamera.Instance?.RemoveOutline(this);
 
-		private Material[] _SharedMaterials;
-		public Material[] SharedMaterials
-		{
-			get
-			{
-				if (_SharedMaterials == null)
-					_SharedMaterials = Renderer.sharedMaterials;
-
-				return _SharedMaterials;
-			}
-		}
+		private Material[] sharedMaterials;
+		public Material[] SharedMaterials => sharedMaterials ?? (sharedMaterials = Renderer.sharedMaterials);
 	}
 }

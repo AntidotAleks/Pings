@@ -165,7 +165,7 @@ namespace pings
             #region Fancy Outline
             // https://assetstore.unity.com/packages/vfx/shaders/fullscreen-camera-effects/outline-effect-78608
             
-            var request2 = AssetBundle.LoadFromMemoryAsync(Pings.mod.GetEmbeddedFileBytes("outlines/fancy/outline.assets"));
+            var request2 = AssetBundle.LoadFromMemoryAsync(Pings.mod.GetEmbeddedFileBytes("outlines/fancy/betteroutline.assets"));
             yield return request2;
 
             _assetFancy = request2.assetBundle;
