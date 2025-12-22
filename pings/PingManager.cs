@@ -16,7 +16,8 @@ namespace pings
         private static GameObject _pingPrefab;
         
         private static Camera Camera => Camera.main ?? Camera.current;
-        private static readonly Dictionary<CSteamID, PingInstance> ActivePings = new Dictionary<CSteamID, PingInstance>();
+        private static readonly Dictionary<CSteamID, Queue<PingInstance>> ActivePings = new Dictionary<CSteamID, Queue<PingInstance>>();
+        
 
         private const float ScaleFactor = 10f;
         #endregion
@@ -37,28 +38,36 @@ namespace pings
         #endregion
         
         #region Pings Update
-        internal static void UpdatePings()
+        internal static void Update()
         {
             if (!Pings.HasPingsMod || !RAPI.IsCurrentSceneGame()) return; // Only in game
 
             RemoveOldPings();
             UpdatePingPositions();
-            CreatePingIfKeyPressed();
+            
+            if (CanvasHelper.ActiveMenu != MenuType.None) return; // If any menu is open, ignore
+            CreatePingOnKeyPress();
+            RemoveAllPingsOnKeyPress();
         }
 
         private static void RemoveOldPings()
         {
             for (var i = ActivePings.Count - 1; i >= 0; i--)
             {
-                var ping = ActivePings.ElementAt(i);
-                if (Time.time > ping.Value.SpawnTime + Pings.PingDuration)
-                    RemovePing(ping.Key);
+                var playerPings = ActivePings.ElementAt(i);
+                while (playerPings.Value.TryPeek(out var ping))
+                {
+                    if (Time.time < ping.SpawnTime + Pings.PingDuration)
+                        break;
+                    RemoveOldestPing(playerPings.Key);
+                }
             }
         }
 
         private static void UpdatePingPositions()
         {
-            foreach (var (_, ping) in ActivePings)
+            foreach (var (_, queue) in ActivePings)
+            foreach (var ping in queue)
             {
                 var worldPos = ping.WorldPosition;
                 var screenPos = Camera.WorldToScreenPoint(worldPos);
@@ -73,10 +82,9 @@ namespace pings
             }
         }
 
-        private static void CreatePingIfKeyPressed()
+        private static void CreatePingOnKeyPress()
         {
             if (!Input.GetKeyDown(Pings.PingKey.MainKey) && !Input.GetKeyDown(Pings.PingKey.AltKey)) return; // On key press only
-            if (CanvasHelper.ActiveMenu != MenuType.None) return; // If any menu is open, ignore
             
             var ray = Camera.ScreenPointToRay(Input.mousePosition);
             if (!CastUtil.PingCast(ray, out var hit)) return; // If nothing hit, ignore
@@ -86,13 +94,24 @@ namespace pings
             RAPI.SendNetworkMessage(p, Pings.ModChannel); // Send ping to other players
             CreatePing(Pings.SteamID, worldPos, CastUtil.ClosestTransform(worldPos)); 
         }
+        
+        private static void RemoveAllPingsOnKeyPress()
+        {
+            if (!Input.GetKeyDown(Pings.ClearAllPingsKey.MainKey) && !Input.GetKeyDown(Pings.ClearAllPingsKey.AltKey)) return; // On key press only
+            
+            RemoveAllPings();
+        }
         #endregion
 
         #region Ping Creation and Removal
         internal static void CreatePing(CSteamID steamID, Vector3 worldPos, Transform hitTransform)
         {
             if (!hitTransform) return;
-            RemovePing(steamID); // Remove existing ping for this player, if any
+            
+            if (!ActivePings.ContainsKey(steamID))
+                ActivePings[steamID] = new Queue<PingInstance>();
+            else if (ActivePings[steamID].Count >= Pings.maxPingsPerPlayer)
+                RemoveOldestPing(steamID); // Remove existing ping for this player, if at max capacity
             
             // Get ping data (name and transform)
             var (pingName, transformForOutline) = PingData.GetFrom(hitTransform, worldPos);
@@ -102,26 +121,37 @@ namespace pings
             pingUI.SetActive(true);
             pingUI.GetComponentInChildren<Text>().text = pingName;
             
-            // Add outline to the hit object or return existing outline on that object. Returns null if transform == null, AKA no outline is needed
+            
+            // Add outline to the hit object or return existing outline on that object. Returns null if transform == null
             var outline = CreateOutline(transformForOutline);
-            ActivePings[steamID] = new PingInstance
+            ActivePings[steamID].Enqueue(new PingInstance
             {
-                HitTransform = /*pingTransform ?? */hitTransform,
-                LocalPosition = (/*pingTransform ?? */hitTransform) ? (/*pingTransform ?? */hitTransform).InverseTransformPoint(worldPos) : worldPos,
+                HitTransform = hitTransform,
+                LocalPosition = hitTransform ? hitTransform.InverseTransformPoint(worldPos) : worldPos,
                 UIObject = pingUI,
                 SpawnTime = Time.time,
                 Outline = outline
-            };
+            });
         }
         
-        private static void RemovePing(CSteamID steamID)
+        private static void RemoveOldestPing(CSteamID steamID)
         {
-            if (!ActivePings.Remove(steamID, out var ping)) return; // If ping doesn't exist, do nothing
+            if (!ActivePings.TryGetValue(steamID, out var queue)) return; // Skip if no queue with pings exists from this player
+            var ping = queue.Dequeue();
+            if (queue.Count == 0)
+                ActivePings.Remove(steamID); // Remove empty queue
+            
             Destroy(ping.UIObject);
             
             if (ping.Outline && !GetOutlineOfPingFromActive(ping.HitTransform))
                 // Since ping is removed from active, #GetOutlineOfPingFromActive will return true only if the outline is still present on other pings
                 DestroyImmediate(ping.Outline); // Need to use DestroyImmediate since right after that #CreateOutline will check for outlines
+        }
+        
+        public static void RemoveAllPings()
+        {
+            while (ActivePings.Count > 0)
+                RemoveOldestPing(ActivePings.First().Key);
         }
         #endregion
 
@@ -150,38 +180,36 @@ namespace pings
             }
         }
         
-        private static Outline GetOutlineOfPingFromActive(Transform pingTransform)
-        {
-            return ActivePings.FirstOrDefault(pair => pair.Value.HitTransform == pingTransform).Value?.Outline;
-        }
+        private static Outline GetOutlineOfPingFromActive(Transform pingTransform) =>
+        (
+            from queue in ActivePings.Values 
+            from ping in queue 
+            where ping.HitTransform == pingTransform 
+            select ping.Outline
+        ).FirstOrDefault();
+
         #endregion
 
         #region Setup and Cleanup
-        public static void Setup()
+        public static void OnLoad()
         {
-            _canvas = pings.Setup.CreateCanvas();
-            _pingPrefab = pings.Setup.CreatePingPrefab();
-            pings.Setup.LoadLocalizations();
+            _canvas = Setup.CreateCanvas();
+            _pingPrefab = Setup.CreatePingPrefab();
+            Setup.LoadLocalizations();
         }
         
-        public static void Cleanup()
+        public static void OnUnload()
         {
             RemoveAllPings();
             if (_canvas) Destroy(_canvas.gameObject);
             if (_pingPrefab) Destroy(_pingPrefab);
-        }
-        
-        public static void RemoveAllPings()
-        {
-            while (ActivePings.Count > 0)
-                RemovePing(ActivePings.First().Key);
         }
         #endregion
     }
 
     public static class CastUtil
     {
-        #region Cone Cast For Pings
+        #region Cone Cast
         private const int Mask = ~((1 << 1) // Transparent FX
                                    | (1 << 4) // Water
                                    | (1 << 5) // UI

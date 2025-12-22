@@ -103,7 +103,7 @@ namespace pings
 
         
         private static AssetBundle _asset;
-        internal static IEnumerator LoadOutlines()
+        internal static IEnumerator LoadAssets()
         {
             var request = AssetBundle.LoadFromMemoryAsync(Pings.mod.GetEmbeddedFileBytes("misc/outline.assets"));
             
@@ -113,7 +113,7 @@ namespace pings
             Pings.FillMaterial = _asset.LoadAsset<Material>("OutlineFill");
         }
 
-        internal static void UnloadOutlines()
+        internal static void UnloadAssets()
         {
             _asset?.Unload(true);
             Destroy(Pings.OutlineMaterial);
