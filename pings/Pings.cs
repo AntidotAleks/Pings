@@ -1,3 +1,4 @@
+using System;
 using System.Collections;
 using System.Diagnostics.CodeAnalysis;
 using System.Runtime.CompilerServices;
@@ -80,12 +81,8 @@ namespace pings
 
         #endregion
 
-        #region PingManager
+        #region PingManager and Networking
         public void Update() => PingManager.Update();
-        #endregion
-
-        #region Networking
-        
         public void FixedUpdate() => Networking.CheckMessages();
         public override void WorldEvent_WorldLoaded() => Networking.OnLoad();
         public override void WorldEvent_WorldUnloaded() => Networking.OnUnload();
