@@ -25,9 +25,9 @@ namespace pings
         {
             mod = this;
             
-            yield return Setup.LoadOutlines();
+            yield return Setup.LoadAssets();
             Networking.OnLoad();
-            PingManager.Setup();
+            PingManager.OnLoad();
             
             Log("Mod Pings is loaded!");
         }
@@ -36,15 +36,15 @@ namespace pings
         {
 
             Networking.OnUnload();
-            PingManager.Cleanup();
-            Setup.UnloadOutlines();
+            PingManager.OnUnload();
+            Setup.UnloadAssets();
             
             Log("Mod Pings is unloaded.");
         }
         #endregion
 
         #region Translation Commands
-        [ConsoleCommand(name: "TranslateSearch", docs: "Searches for terms in the translation file.")]
+        [ConsoleCommand(name: "PingsTranslateSearch", docs: "Searches for terms in the translation file.")]
         public static string TranslateSearch(string[] args)
         {
             if (args.Length == 0)
@@ -54,7 +54,7 @@ namespace pings
             return null;
         }
         
-        [ConsoleCommand(name: "Translate", docs: "Translates a term from the translation file.")]
+        [ConsoleCommand(name: "PingsTranslate", docs: "Translates a term from the translation file.")]
         public static string Translate(string[] args)
         {
             if (args.Length == 0)
@@ -81,7 +81,7 @@ namespace pings
         #endregion
 
         #region PingManager
-        public void Update() => PingManager.UpdatePings();
+        public void Update() => PingManager.Update();
         #endregion
 
         #region Networking
@@ -94,27 +94,55 @@ namespace pings
 
         #region Settings // ExtraSettingsAPI integration
         
+        public static float[] PingDurationValues { get; } = { 3,4,5,6,7,8,9,10,12,15,20,30,45,60,float.PositiveInfinity};
+        
         public static Keybind PingKey { get; private set; } = new Keybind("pingKeybind", KeyCode.Mouse2);
+        public static Keybind ClearAllPingsKey { get; private set; } = new Keybind("clearPingsKeybind", KeyCode.None);
         public static float PingDuration { get; private set; } = 10f;
+        public static int maxPingsPerPlayer = 1;
         public static int DebugMode { get; private set; }
 
-        public void ExtraSettingsAPI_Load() { Load_ExtraSettingsAPI_Settings(); }
-
-        public void ExtraSettingsAPI_SettingsClose() { Load_ExtraSettingsAPI_Settings(); }
-
+        public void ExtraSettingsAPI_Load() => Load_ExtraSettingsAPI_Settings(); 
+        public void ExtraSettingsAPI_SettingsClose() => Load_ExtraSettingsAPI_Settings();
         private static void Load_ExtraSettingsAPI_Settings()
         {
             PingKey = ExtraSettingsAPI_GetKeybind("pingKeybind");
-            PingDuration = ExtraSettingsAPI_GetSliderValue("pingDuration");
+            ClearAllPingsKey = ExtraSettingsAPI_GetKeybind("clearPingsKeybind");
+            PingDuration = PingDurationValues[Clamp((int) Math.Round(ExtraSettingsAPI_GetSliderValue("pingDuration")), 0, PingDurationValues.Length - 1)];
+            maxPingsPerPlayer = (int) ExtraSettingsAPI_GetSliderValue("maxPingsPerPlayer");
+            if (maxPingsPerPlayer == 11) // Unlimited
+                maxPingsPerPlayer = int.MaxValue;
             DebugMode = ExtraSettingsAPI_GetComboboxSelectedIndex("debugMode");
+
+            int Clamp(int val, int min, int max) => val < min ? min  :  val > max ? max  :  val;
         }
 
-        public void ExtraSettingsAPI_Unload()
+        private static void ExtraSettingsAPI_Unload()
         {
             PingKey = new Keybind("pingKeybind", KeyCode.Mouse2);
+            ClearAllPingsKey = new Keybind("clearPingsKeybind", KeyCode.None);
             PingDuration = 10f;
+            maxPingsPerPlayer = 1;
             DebugMode = 0;
         }
+        
+        private static string ExtraSettingsAPI_HandleSliderText(string settingName, float value)
+        {
+            switch (settingName)
+            {
+                case "pingDuration":
+                    int index = (int)Math.Round(ExtraSettingsAPI_GetSliderValue("pingDuration"));
+                    if (index == PingDurationValues.Length - 1)
+                        return "Infinite";
+                    return PingDurationValues[index] + " seconds";
+                case "maxPingsPerPlayer":
+                    int amount = (int)Math.Round(ExtraSettingsAPI_GetSliderValue("maxPingsPerPlayer"));
+                    return amount == 11 ? "Unlimited" : amount.ToString();
+                default:
+                    return "idk tbh";
+            }
+        }
+        
         // Overridden by ExtraSettingsAPI
         [MethodImpl(MethodImplOptions.NoInlining)]
         public static Keybind ExtraSettingsAPI_GetKeybind(string SettingName) => null;

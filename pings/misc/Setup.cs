@@ -148,7 +148,7 @@ namespace pings
 
         
         private static AssetBundle _asset;
-        internal static IEnumerator LoadOutlines()
+        internal static IEnumerator LoadAssets()
         {
             // Quick Outline
             // https://assetstore.unity.com/packages/tools/particles-effects/quick-outline-115488
@@ -162,7 +162,7 @@ namespace pings
 
         }
 
-        internal static void UnloadOutlines()
+        internal static void UnloadAssets()
         {
             _asset?.Unload(true);
             Destroy(Pings.OutlineMaterial);
