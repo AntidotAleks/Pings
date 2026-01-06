@@ -1,8 +1,8 @@
 {
   "name": "Pings",
   "author": "Antidot",
-  "description": "Adds a ping system to Raft, allowing players to mark locations or items of interest. Mod \"Extra Settings API\" (by Aidanamite) gives ability to change ping keybinds and duration.",
-  "version": "3.0",
+  "description": "Adds a ping system to Raft, allowing players to mark locations or items of interest. Mod \"Extra Settings API\" (by Aidanamite) allows to change ping keybinds, duration and other things.",
+  "version": "3.1",
   "license": "GNU AGPLv3",
   "icon": "icon.jpg",
   "banner": "banner.jpg",
@@ -13,25 +13,34 @@
   "excludedFiles": [],
   "modSettings": [
     {
+      "type": "text",
+      "text": "--- General"
+    },
+    {
+      "type": "seperator",
+      "section": "section-general"
+    },
+    
+    {
       "type": "keybind",
       "name": "pingKeybind",
-      "text": "Keybind to Ping",
+      "text": "Keybind to ping",
       "mainDefault": "Mouse2"
     },
     {
       "type": "keybind",
       "name": "clearPingsKeybind",
-      "text": "Keybind to Clear All Existing Pings"
+      "text": "Keybind to clear all existing pings"
     },
     {
       "type": "slider",
       "name": "pingDuration",
       "text": "Ping Duration",
-      "default": 10,
+      "default": 7,
       "range": {
         "min": 0,
         "max": 14,
-        "decimals": 7,
+        "decimals": 0,
         "type": "custom"
       }
     },
@@ -49,12 +58,40 @@
     },
     {
       "type": "seperator",
+      "section": "section-general-end"
+    },
+    
+    
+    
+    {
+      "type": "text",
+      "name": "visual",
+      "text": "--- Visual"
+    },
+    {
+      "type": "seperator",
+      "section": "section-visual"
+    },
+    
+    {
+      "type": "checkbox",
+      "name": "showEdgePingAsArrow",
+      "section": "visual",
+      "text": "Show pings on edge of screen as arrow",
+      "default": true
+    },
+    
+    
+    
+    {
+      "type": "seperator",
       "section": "section-debug"
     },
+    
     {
       "type": "combobox",
       "name": "debugMode",
-      "text": "Debug Logging Level In Console",
+      "text": "--- Debug",
       "default": "Disabled",
       "values": [
         "Disabled",

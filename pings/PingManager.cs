@@ -34,7 +34,7 @@ namespace pings
 
             public Vector3 WorldPosition => HitTransform
                 ? HitTransform.TransformPoint(LocalPosition)
-                : LocalPosition;
+                : LocalPosition; // Needed to update position of moving objects
         }
         #endregion
         
@@ -47,8 +47,8 @@ namespace pings
             UpdatePingPositions();
             
             if (CanvasHelper.ActiveMenu != MenuType.None) return; // If any menu is open, ignore
-            CreatePingOnKeyPress();
-            RemoveAllPingsOnKeyPress();
+            OnKeyPress(Pings.PingKey, CreatePing);
+            OnKeyPress(Pings.ClearAllPingsKey, RemoveAllPings);
         }
 
         private static void RemoveOldPings()
@@ -71,30 +71,52 @@ namespace pings
             foreach (var ping in queue)
             {
                 var rt = ping.UIObject.transform;
-                rt.position = GetPointPosition(ping, out var worldPos, out var direction);
+                rt.position = GetPointPosition(ping, out var direction);
                 SetPingShape(ping.SubObjects, direction);
 
-                var distance = Vector3.Distance(Camera.transform.position, worldPos);
+                var distance = Vector3.Distance(Camera.transform.position, ping.WorldPosition);
                 var scale = Mathf.Clamp(1f / distance, 0.1f, 2.5f) * ScaleFactor;
                 rt.localScale = Vector3.one * scale;
             }
         }
+        
+        private static void OnKeyPress(Keybind keybind, Action action)
+        {
+            if (Input.GetKeyDown(keybind.MainKey) || Input.GetKeyDown(keybind.AltKey))
+                action();
+        }
+        
+        private static void CreatePing()
+        {
+            var ray = Camera.ScreenPointToRay(Input.mousePosition);
+            if (!CastUtil.PingCast(ray, out var hit)) return; // If nothing hit, ignore
+            
+            var worldPos = hit.point;
+            var p = new PingMessage(worldPos, Pings.SteamID);
+            RAPI.SendNetworkMessage(p, Pings.ModChannel); // Send ping to other players
+            CreatePing(Pings.SteamID, worldPos, CastUtil.ClosestTransform(worldPos)); 
+        }
+        #endregion
 
         #region Ping Position and Shape
 
         private const int BoundDistance = 170;
         [SuppressMessage("ReSharper", "CompareOfFloatsByEqualityOperator")]
-        private static Vector3 GetPointPosition(PingInstance ping, out Vector3 worldPos, out Vector3 direction)
+        private static Vector3 GetPointPosition(PingInstance ping, out Vector3 direction)
         {
-            worldPos = ping.WorldPosition;
+            var worldPos = ping.WorldPosition;
             var pointPos = Camera.WorldToScreenPoint(worldPos);
 
             // If point is on the screen
             
             var posOnScreen = pointPos;
-            posOnScreen.x = Mathf.Clamp(posOnScreen.x, BoundDistance, Screen.width - BoundDistance);
-            posOnScreen.y = Mathf.Clamp(posOnScreen.y, BoundDistance, Screen.height - BoundDistance);
-            var isOnScreen = pointPos.z > 0 && pointPos.x == posOnScreen.x && pointPos.y == posOnScreen.y;
+            bool isOnScreen = true;
+            if (Pings.ShowEdgePingAsArrow)
+            {
+                posOnScreen.x = Mathf.Clamp(posOnScreen.x, BoundDistance, Screen.width - BoundDistance);
+                posOnScreen.y = Mathf.Clamp(posOnScreen.y, BoundDistance, Screen.height - BoundDistance);
+                isOnScreen = pointPos.z > 0 && pointPos.x == posOnScreen.x && pointPos.y == posOnScreen.y;
+            }
 
             ping.SubObjects.textObject.color = new Color(1, 1, 1, isOnScreen ? 1 : 0);
             if (isOnScreen) 
@@ -112,7 +134,7 @@ namespace pings
             var screenCenter = new Vector3(Screen.width / 2f, Screen.height / 2f);
             pointPos -= screenCenter;
 
-            #region If looking away >90 degrees, move the point to the bottom of the screen
+            // If looking away >90 degrees, move the point to the bottom of the screen
 
             var angle = Vector3.SignedAngle((worldPos - Camera.transform.position).XZOnly(), Camera.transform.forward.XZOnly(), Vector3.up);
             var delta = Math.Max(Math.Abs(angle) - 90f, 0) / 90; // Value between 90 and 180 degrees away from point to [0, 1]
@@ -121,9 +143,8 @@ namespace pings
             pointPos *= 1-delta;
             pointPos += Quaternion.AngleAxis(angle, Vector3.forward) * new Vector3(0, delta, 0);
 
-            #endregion
 
-            #region Move point to the edge of the screen
+            // Move point to the edge of the screen
             
             var halfWidth = Screen.width / 2f - BoundDistance;
             var halfHeight = Screen.height / 2f - BoundDistance;
@@ -136,10 +157,9 @@ namespace pings
                 tx > 0 ? tx : float.MaxValue,
                 ty > 0 ? ty : float.MaxValue
             );
-            #endregion
             
             direction = pointPos.normalized;
-            return screenCenter +  pointPos * t;
+            return screenCenter + pointPos * t;
         }
         
         private static void SetPingShape(Setup.PingSubObjects subobjects, Vector3 direction)
@@ -148,7 +168,7 @@ namespace pings
             var arrow = subobjects.arrowShape;
             var rt = subobjects.rectTransform;
 
-            if (direction == Vector3.zero) // It means the ping is on the screen
+            if (direction == Vector3.zero) // Ping is on the screen
             {
                 diamond.color = Color.white;
                 arrow.color = Color.clear;
@@ -162,28 +182,6 @@ namespace pings
                 rt.rotation = Quaternion.Euler(0, 0, -angle); // Rotate arrow to point in the direction of the ping
             }
         }
-
-        #endregion
-        
-        private static void CreatePingOnKeyPress()
-        {
-            if (!Input.GetKeyDown(Pings.PingKey.MainKey) && !Input.GetKeyDown(Pings.PingKey.AltKey)) return; // On key press only
-            
-            var ray = Camera.ScreenPointToRay(Input.mousePosition);
-            if (!CastUtil.PingCast(ray, out var hit)) return; // If nothing hit, ignore
-            
-            var worldPos = hit.point;
-            var p = new PingMessage(worldPos, Pings.SteamID);
-            RAPI.SendNetworkMessage(p, Pings.ModChannel); // Send ping to other players
-            CreatePing(Pings.SteamID, worldPos, CastUtil.ClosestTransform(worldPos)); 
-        }
-        
-        private static void RemoveAllPingsOnKeyPress()
-        {
-            if (!Input.GetKeyDown(Pings.ClearAllPingsKey.MainKey) && !Input.GetKeyDown(Pings.ClearAllPingsKey.AltKey)) return; // On key press only
-            
-            RemoveAllPings();
-        }
         #endregion
 
         #region Ping Creation and Removal
@@ -191,13 +189,11 @@ namespace pings
         {
             if (!hitTransform) return;
             
-            if (!ActivePings.ContainsKey(steamID))
+            if (!ActivePings.TryGetValue(steamID, out var queue))
                 ActivePings[steamID] = new Queue<PingInstance>();
-            else if (ActivePings[steamID].Count >= Pings.maxPingsPerPlayer)
-                RemoveOldestPing(steamID); // Remove existing ping for this player, if at max capacity
             
             // Get ping data (name and transform)
-            var (pingName, transformForOutline) = PingData.GetFrom(hitTransform, worldPos);
+            var (pingName, transformToOutline) = PingData.GetPingData(hitTransform, worldPos);
 
             // Create ping
             var pingObject = Instantiate(_pingPrefab, _canvas.transform);
@@ -206,31 +202,33 @@ namespace pings
             subObjects.textObject.text = pingName;
             
             
-            // Add outline to the hit object or return existing outline on that object. Returns null if transform == null
-            var outline = CreateOutline(transformForOutline);
-            ActivePings[steamID].Enqueue(new PingInstance
+            // Create the ping instance
+            var newPing = new PingInstance
             {
                 HitTransform = hitTransform,
                 LocalPosition = hitTransform ? hitTransform.InverseTransformPoint(worldPos) : worldPos,
                 UIObject = pingObject,
                 SubObjects = subObjects,
                 SpawnTime = Time.time,
-                Outline = outline
-            });
+                Outline = CreateOutline(transformToOutline)
+            };
+    
+            ActivePings[steamID].Enqueue(newPing);
+            
+            if (ActivePings[steamID].Count > Pings.maxPingsPerPlayer)
+                RemoveOldestPing(steamID); // Remove existing ping for this player, if at max capacity
         }
         
         private static void RemoveOldestPing(CSteamID steamID)
         {
-            if (!ActivePings.TryGetValue(steamID, out var queue)) return; // Skip if no queue with pings exists from this player
-            var ping = queue.Dequeue();
+            if (!ActivePings.TryGetValue(steamID, out var queue) || !queue.TryDequeue(out var ping)) return; // Skip if no queue with pings exists from this player
             if (queue.Count == 0)
                 ActivePings.Remove(steamID); // Remove empty queue
             
             Destroy(ping.UIObject);
             
-            if (ping.Outline && !GetOutlineOfPingFromActive(ping.HitTransform))
-                // Since ping is removed from active, #GetOutlineOfPingFromActive will return true only if the outline is still present on other pings
-                DestroyImmediate(ping.Outline); // Need to use DestroyImmediate since right after that #CreateOutline will check for outlines
+            if (OutlineIsNotUsed(ping.Outline))
+                DestroyImmediate(ping.Outline);
         }
         
         public static void RemoveAllPings()
@@ -247,7 +245,7 @@ namespace pings
             if (!target) return null;
 
             try {
-                var outline = GetOutlineOfPingFromActive(target);
+                var outline = target.gameObject.GetComponent<Outline>();
                 if (outline)
                     return outline; // If outline already exists for this object, return it
                 
@@ -265,11 +263,11 @@ namespace pings
             }
         }
         
-        private static Outline GetOutlineOfPingFromActive(Transform pingTransform) =>
-        (
+        private static bool OutlineIsNotUsed(Outline outline) =>
+        !outline || !(
             from queue in ActivePings.Values 
             from ping in queue 
-            where ping.HitTransform == pingTransform 
+            where ping.Outline == outline 
             select ping.Outline
         ).FirstOrDefault();
 

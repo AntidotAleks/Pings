@@ -93,33 +93,43 @@ namespace pings
         
         public static float[] PingDurationValues { get; } = { 3,4,5,6,7,8,9,10,12,15,20,30,45,60,float.PositiveInfinity};
         
+        // Control
         public static Keybind PingKey { get; private set; } = new Keybind("pingKeybind", KeyCode.Mouse2);
         public static Keybind ClearAllPingsKey { get; private set; } = new Keybind("clearPingsKeybind", KeyCode.None);
         public static float PingDuration { get; private set; } = 10f;
         public static int maxPingsPerPlayer = 1;
+        // Visual
+        public static bool ShowEdgePingAsArrow = true;
+        // Debug
         public static int DebugMode { get; private set; }
 
         public void ExtraSettingsAPI_Load() => Load_ExtraSettingsAPI_Settings(); 
         public void ExtraSettingsAPI_SettingsClose() => Load_ExtraSettingsAPI_Settings();
         private static void Load_ExtraSettingsAPI_Settings()
         {
+            // Control
             PingKey = ExtraSettingsAPI_GetKeybind("pingKeybind");
             ClearAllPingsKey = ExtraSettingsAPI_GetKeybind("clearPingsKeybind");
             PingDuration = PingDurationValues[Clamp((int) Math.Round(ExtraSettingsAPI_GetSliderValue("pingDuration")), 0, PingDurationValues.Length - 1)];
             maxPingsPerPlayer = (int) ExtraSettingsAPI_GetSliderValue("maxPingsPerPlayer");
             if (maxPingsPerPlayer == 11) // Unlimited
                 maxPingsPerPlayer = int.MaxValue;
+            // Visual
+            ShowEdgePingAsArrow = ExtraSettingsAPI_GetCheckboxState("showEdgePingAsArrow");
+            // Debug
             DebugMode = ExtraSettingsAPI_GetComboboxSelectedIndex("debugMode");
-
-            int Clamp(int val, int min, int max) => val < min ? min  :  val > max ? max  :  val;
         }
 
         private static void ExtraSettingsAPI_Unload()
         {
+            // Visual
             PingKey = new Keybind("pingKeybind", KeyCode.Mouse2);
             ClearAllPingsKey = new Keybind("clearPingsKeybind", KeyCode.None);
             PingDuration = 10f;
             maxPingsPerPlayer = 1;
+            // Control
+            ShowEdgePingAsArrow = true;
+            // Debug
             DebugMode = 0;
         }
         
@@ -128,8 +138,10 @@ namespace pings
             switch (settingName)
             {
                 case "pingDuration":
-                    int index = (int)Math.Round(ExtraSettingsAPI_GetSliderValue("pingDuration"));
-                    if (index == PingDurationValues.Length - 1)
+                    int index = Clamp(
+                        (int) Math.Round(ExtraSettingsAPI_GetSliderValue("pingDuration")), 
+                        0, PingDurationValues.Length-1);
+                    if (index == PingDurationValues.Length-1)
                         return "Infinite";
                     return PingDurationValues[index] + " seconds";
                 case "maxPingsPerPlayer":
@@ -147,6 +159,10 @@ namespace pings
         public static float ExtraSettingsAPI_GetSliderValue(string SettingName) => 0;
         [MethodImpl(MethodImplOptions.NoInlining)]
         public static int ExtraSettingsAPI_GetComboboxSelectedIndex(string SettingName) => -1;
+        [MethodImpl(MethodImplOptions.NoInlining)]
+        public static bool ExtraSettingsAPI_GetCheckboxState(string settingName) => false;
+
+        private static int Clamp(int val, int min, int max) => val < min ? min  :  val > max ? max  :  val;
         
         #endregion
     }

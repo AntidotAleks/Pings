@@ -27,7 +27,6 @@ namespace pings
     }
 
     public Mode OutlineMode {
-      get { return outlineMode; }
       set {
         outlineMode = value;
         needsUpdate = true;
@@ -35,7 +34,6 @@ namespace pings
     }
 
     public Color OutlineColor {
-      get { return outlineColor; }
       set {
         outlineColor = value;
         needsUpdate = true;
@@ -43,7 +41,6 @@ namespace pings
     }
 
     public float OutlineWidth {
-      get { return outlineWidth; }
       set {
         outlineWidth = value;
         needsUpdate = true;

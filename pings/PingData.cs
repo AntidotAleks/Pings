@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Text.RegularExpressions;
@@ -12,18 +13,40 @@ namespace pings
     {
         private static string TermPing => Translate("ModPings/Ping"); // Default ping term
         private static readonly StringBuilder Builder = new StringBuilder(); // For debugging output
-
-        public static (string, Transform) GetFrom(Transform transform, Vector3 worldPos)
+        
+        public static (string, Transform) GetPingData(Transform hitTransform, Vector3 worldPos)
         {
-            var path = transform.Path();
+            var path = hitTransform.Path();
+            PathDebug();
 
-            #region Debugging
-            if (Pings.DebugMode >= 1)
-                Debug.Log($"[Pings: Handling] Ping at {worldPos}" + (Pings.DebugMode == 1 ? $" on path {path}":". Ping path and components (from top to root):"));
+            // Shark ping
+            if (path.StartsWith("ArmatureParent/Armature/Root") && !path.Contains("AI") && !path.Contains("Seagull"))
+                return (Translate("ModPings/Animal/Shark"), hitTransform.root); // If it works, it works
             
-            if (Pings.DebugMode == 2)
+            // Island and underwater ping
+            if ((path.Contains("Terrain") || path.Contains("BigRock")) && !path.Contains("Shark"))
+                return (worldPos.y > -2 ? Translate("ModPings/Landmark/Island") : Translate("ModPings/Landmark/OceanFloor"), null);
+
+            // By pinged object type
+            string str;
+            (hitTransform, str) = GetPingDataByType(hitTransform);
+            if (str != null)
+                return (str, hitTransform); // If we found a specific type, return it
+            
+            if (Pings.DebugMode >= 1)
+                Debug.Log("No specific type found for path, using default ping.");
+            
+            
+            return (TermPing, hitTransform); // Default ping
+            
+            
+            void PathDebug()
             {
-                var t = transform;
+                if (Pings.DebugMode < 1) return;
+                Debug.Log($"[Pings: Handling] Ping at {worldPos}" + (Pings.DebugMode == 1 ? $" on path {path}":". Ping path and components (from top to root):"));
+                
+                if (Pings.DebugMode < 2) return;
+                var t = hitTransform;
                 while (t)
                 {
                     var components = t.GetComponents<Component>();
@@ -35,42 +58,25 @@ namespace pings
                 Debug.Log(Builder.Remove(Builder.Length-1, 1).ToString());
                 Builder.Clear();
             }
-            #endregion
-
-            #region Return ping data by path
-            // Shark ping
-            if (path.StartsWith("ArmatureParent/Armature/Root") && !path.Contains("AI") && !path.Contains("Seagull"))
-                return (Translate("ModPings/Animal/Shark"), transform.root); // If it works, it works
-            
-            // Island and underwater ping
-            if ((path.Contains("Terrain") || path.Contains("BigRock")) && !path.Contains("Shark"))
-                return (worldPos.y > -2 ? Translate("ModPings/Landmark/Island") : Translate("ModPings/Landmark/OceanFloor"), null);
-            #endregion
-
-            #region Return ping data by object type
-            string str;
-            (transform, str) = GetDataByType(transform);
-            if (str != null)
-                return (str, transform); // If we found a specific type, return it
-            
-            if (Pings.DebugMode >= 1)
-                Debug.Log("No specific type found for path, using default ping.");
-            #endregion
-            
-            return (TermPing, transform);
         }
         
         #region Ping Data by Object Type
 
         #region Dictionary
-        public static Dictionary<Type, Func<List<Transform>, int, Component, (Transform, string)>> DataByType = 
+        // ReSharper disable once FieldCanBeMadeReadOnly.Local
+        private static Dictionary<Type, Func<List<Transform>, int, Component, (Transform, string)>> _dataByType = 
             new Dictionary<Type, Func<List<Transform>, int, Component, (Transform, string)>>
-        #endregion
         {
             // Raft
             #region Block
             { typeof(Block), (transformsList, i, c) 
-                => (transformsList[i], NameFromBlock((Block)c)) },
+                => {
+                    var term = ((Block) c).buildableItem.settings_Inventory.LocalizationTerm;
+                    term = Translate(term);
+                    term = term.IsNullOrEmpty() ? TermPing : RemoveDescription(term);
+                    return (transformsList[i], term);
+                }
+            },
             #endregion
             // Living entities
             #region AI_StateMachine
@@ -78,12 +84,12 @@ namespace pings
                 => {
                 var t = transformsList[0].root.GetComponent<AI_StateMachine_Shark>()?.trackedRotational?.transform; // Shark outline appears on different transform
                 if (!t) t = transformsList[i];
-                return (t, NameFromAI(c));
+                return (t, PingTitleFromAIType(c));
             }},
             #endregion
             #region AI_Sub
             { typeof(AI_Sub), (transformsList, i, c) 
-                => (transformsList[i], NameFromAI(c)) },
+                => (transformsList[i], PingTitleFromAIType(c)) },
             #endregion
             #region Seagull
             { typeof(Seagull), (transformsList, i, c) 
@@ -122,6 +128,9 @@ namespace pings
                             Debug.Log($"[Pings: Localization] No translation found for Note using key ModPings/Notes/{itemName}");
                         
                         pickupName = Translate("ModPings/Substring/Note") + CleanString(t.name.Substring(t.name.LastIndexOf('_') + 1));
+                        break;
+                    default:
+                        pickupName = TermPing;
                         break;
                 }
                 return (t, pickupName);
@@ -163,19 +172,37 @@ namespace pings
                 landmarkName = landmarkName.Substring(landmarkName.IndexOf('_') + 1);
                 landmarkName = Regex.Replace(landmarkName, @"\d+", ""); // Remove numbers
 
-                switch (landmarkName)
+
+                if (landmarkName == "Raft#Floating raft")
+                    return (t, Translate("ModPings/AbandonedRaft"));
+                
+                // If landmark is not in the dictionary and is not Small or Big island
+                if (!LandmarkDictionary.TryGetValue(landmarkName, out var landmarkData) &&
+                    !landmarkName.Contains("Small") && !landmarkName.Contains("Big"))
                 {
-                    // Floating Raft
-                    case "Raft#Floating raft":
-                        return (t, Translate("ModPings/AbandonedRaft"));
-                    default:
-                        return (null, NameFromLandmark(landmarkName, transformsList, i) ?? CleanString(t.name));
+                    if (Pings.DebugMode >= 2)
+                        Debug.Log($"[Pings: Localization] Landmark \"{landmarkName}\" is not in the dictionary");
+                    return (null, null);
                 }
+                
+                if (landmarkData == default) // If Landmark is Small or Big island
+                    landmarkData = (landmarkName.Contains("Small") ? "Small" : "Big", 1);
+                    
+                // Try to translate using the landmark name
+                if (TryDeepTranslate("ModPings/Landmark/" + landmarkData.Name, transformsList,
+                        i - landmarkData.Offset, out var output))
+                    return (null, output); // If translation is found
+                    
+                // If no translation is found
+                if (Pings.DebugMode >= 1)
+                    Debug.Log($"[Pings: Localization] No translation found for {landmarkData.Name} Landmark using key ModPings/Landmark/{landmarkData.Name}/" +
+                              $"{string.Join("/", transformsList.Take(i - landmarkData.Offset + 1).Reverse().Select(tr => KeyString(tr.name)).ToList())} or its parents");
+                
+                return (null, CleanString(t.name));
             }}
             #endregion
         };
 
-        #region Landmark Dictionary
         private static readonly Dictionary<string, (string Name, int Offset)> LandmarkDictionary = new Dictionary<string, (string, int)>
         {
             {"BalboaIsland", ("Balboa", 2)},
@@ -187,33 +214,29 @@ namespace pings
             {"CaravanIsland#RealDeal", ("Caravan", 1)},
             {"Tangaroa#", ("Tangaroa", 1)}
         };
-        #endregion
 
-        #region Dictionary Reading Method
-        private static (Transform, string) GetDataByType(Transform transform)
+        private static (Transform, string) GetPingDataByType(Transform transform)
         {
             if (!transform) return (null, null);
             var tList = new List<Transform>();
             for (var t = transform; t; t = t.parent)
                 tList.Add(t);
 
-            foreach (var type in DataByType.Keys)
+            foreach (var type in _dataByType.Keys)
             {
                 var index = 0;
                 foreach (var component in tList.Select(t => t.GetComponent(type))) // Get transform has component of type
                 {
                     if (component) // If component exists
-                        return DataByType[type](tList, index, component); // Get data using that component
+                        return _dataByType[type](tList, index, component); // Get data using that component
                     index++; // Otherwise, check next
                 }
             }
             
             return (transform, null); 
         }
-        #endregion
-
-        #region Localization for certain components
-        private static string NameFromAI(Component ai)
+        
+        private static string PingTitleFromAIType(Component ai)
         {
             var term = ai?.name;
             if (term.IsNullOrEmpty())
@@ -227,51 +250,16 @@ namespace pings
                 .Trim();
             switch (term)
             {
-                // Items
                 case "Boar": return Translate("Item/Boar");
                 case "StoneBird": return Translate("Item/Screecher");
-                // Figurines
-                case "Chicken": return NoDescription(Translate("Block/Figurine_Chicken"));
-                case "Llama": return NoDescription(Translate("Block/Figurine_Llama"));
-                case "Goat": return NoDescription(Translate("Block/Figurine_Goat"));
-                // Custom
+                case "Chicken": return RemoveDescription(Translate("Block/Figurine_Chicken"));
+                case "Llama": return RemoveDescription(Translate("Block/Figurine_Llama"));
+                case "Goat": return RemoveDescription(Translate("Block/Figurine_Goat"));
                 default:
                     return LocalizationManager.TryGetTranslation("ModPings/Animal/"+term, out var translation) ? 
                         translation : // If translation is found, return it
                         CleanString(term); // If translation is not found, return cleaned term
             }
-        }
-        private static string NameFromBlock(Block block)
-        {
-            var term = block.buildableItem.settings_Inventory.LocalizationTerm;
-            term = Translate(term);
-            return term.IsNullOrEmpty() ? TermPing : NoDescription(term);
-        }
-        private static string NameFromLandmark(string landmarkName, List<Transform> transformsList, int index)
-        {
-            // If landmark is not in the dictionary and is not Small or Big island
-            if (!LandmarkDictionary.TryGetValue(landmarkName, out var landmarkData) &&
-                !landmarkName.Contains("Small") && !landmarkName.Contains("Big"))
-            {
-                if (Pings.DebugMode >= 2)
-                    Debug.Log($"[Pings: Localization] Landmark \"{landmarkName}\" is not in the dictionary");
-                return null;
-            }
-                
-            if (landmarkData == default) // If Landmark is Small or Big island
-                landmarkData = (landmarkName.Contains("Small") ? "Small" : "Big", 1);
-                    
-            // Try to translate using the landmark name
-            if (TryDeepTranslate("ModPings/Landmark/" + landmarkData.Name, transformsList,
-                    index - landmarkData.Offset, out var output))
-                return output; // If translation is found
-                    
-            // If no translation is found
-            if (Pings.DebugMode >= 1)
-                Debug.Log($"[Pings: Localization] No translation found for {landmarkData.Name} Landmark using key ModPings/Landmark/{landmarkData.Name}/" +
-                          $"{string.Join("/", transformsList.Take(index - landmarkData.Offset + 1).Reverse().Select(tr => KeyString(tr.name)).ToList())} or its parents");
-            return null;
-            
         }
         #endregion
         
@@ -286,10 +274,9 @@ namespace pings
         }
 
         private static bool TryTranslate(string input, out string output) => !string.IsNullOrEmpty(output = Translate(input));
-
+        
         private static bool TryDeepTranslate(string input, List<Transform> tList, int start, out string output)
         {
-            // Get elements from 0 to start index
             var parts = tList
                 .Take(start + 1).Reverse()
                 .Select(t => "/"+KeyString(t.name))
@@ -298,7 +285,6 @@ namespace pings
             {
                 if (TryTranslate(input + string.Join("", parts), out output))
                     return true;
-                // Remove last part and try again
                 parts.RemoveAt(parts.Count - 1);
             }
             output = null;
@@ -328,10 +314,13 @@ namespace pings
             return (transform.parent ? transform.parent.Path()+"/" : "") + transform.name;
         }
 
-        private static string NoDescription(string input)
+        /// <summary>Removes the description from a translated term.</summary>
+        /// <param name="term"> string containing the term and description (e.g. "Basic Bow@Shoots arrows ...").</param>
+        /// <returns>The term without the description (e.g. "Basic Bow").</returns>
+        private static string RemoveDescription(string term)
         {
-            var descIndex = input.IndexOf("@", StringComparison.Ordinal);
-            return descIndex >= 0 ? input.Substring(0, descIndex).Trim() : input.Trim();
+            var descIndex = term.IndexOf("@", StringComparison.Ordinal);
+            return (descIndex >= 0 ? term.Substring(0, descIndex) : term).Trim();
         }
 
         #endregion
