@@ -129,9 +129,6 @@ namespace pings
                         
                         pickupName = Translate("ModPings/Substring/Note") + CleanString(t.name.Substring(t.name.LastIndexOf('_') + 1));
                         break;
-                    default:
-                        pickupName = TermPing;
-                        break;
                 }
                 return (t, pickupName);
             }},

@@ -138,14 +138,21 @@ namespace pings
 
     void OnDisable() {
       foreach (var renderer in renderers) {
+        try
+        {
+          // Remove outline shaders
+          var materials = renderer.sharedMaterials.ToList();
 
-        // Remove outline shaders
-        var materials = renderer.sharedMaterials.ToList();
+          materials.Remove(outlineMaskMaterial);
+          materials.Remove(outlineFillMaterial);
 
-        materials.Remove(outlineMaskMaterial);
-        materials.Remove(outlineFillMaterial);
-
-        renderer.materials = materials.ToArray();
+          renderer.materials = materials.ToArray();
+        } 
+        catch (Exception e) 
+        {
+          if (Pings.DebugMode >= 2)
+            Debug.LogWarning($"[Pings: Outline] Failed to remove outline materials from renderer {renderer.name}: {e.Message}");
+        }
       }
     }
 
