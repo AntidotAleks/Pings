@@ -16,7 +16,7 @@ namespace pings
         private static GameObject _pingPrefab;
         
         private static Camera Camera => Camera.main ?? Camera.current;
-        private static readonly Dictionary<CSteamID, Queue<PingInstance>> ActivePings = new Dictionary<CSteamID, Queue<PingInstance>>();
+        private static readonly Dictionary<CSteamID, LinkedList<PingInstance>> ActivePings = new Dictionary<CSteamID, LinkedList<PingInstance>>();
         
 
         private const float ScaleFactor = 10f;
@@ -56,8 +56,9 @@ namespace pings
             for (var i = ActivePings.Count - 1; i >= 0; i--)
             {
                 var playerPings = ActivePings.ElementAt(i);
-                while (playerPings.Value.TryPeek(out var ping))
+                while (playerPings.Value.Count > 0)
                 {
+                    var ping = playerPings.Value.First.Value;
                     if (Time.time < ping.SpawnTime + Pings.PingDuration)
                         break;
                     RemoveOldestPing(playerPings.Key);
@@ -189,8 +190,8 @@ namespace pings
         {
             if (!hitTransform) return;
             
-            if (!ActivePings.TryGetValue(steamID, out var queue))
-                ActivePings[steamID] = new Queue<PingInstance>();
+            if (!ActivePings.TryGetValue(steamID, out _))
+                ActivePings[steamID] = new LinkedList<PingInstance>();
             
             // Get ping data (name and transform)
             var (pingName, transformToOutline) = PingData.GetPingData(hitTransform, worldPos);
@@ -213,7 +214,7 @@ namespace pings
                 Outline = CreateOutline(transformToOutline)
             };
     
-            ActivePings[steamID].Enqueue(newPing);
+            ActivePings[steamID].AddLast(newPing);
             
             if (ActivePings[steamID].Count > Pings.maxPingsPerPlayer)
                 RemoveOldestPing(steamID); // Remove existing ping for this player, if at max capacity
@@ -221,15 +222,18 @@ namespace pings
         
         private static void RemoveOldestPing(CSteamID steamID)
         {
-            if (!ActivePings.TryGetValue(steamID, out var queue) || !queue.TryDequeue(out var ping)) return; // Skip if no queue with pings exists from this player
+            if (!ActivePings.TryGetValue(steamID, out var queue) || queue.First is null) return; // Skip if no queue with pings exists from this player
+            var ping = queue.First.Value;
+            
+            
+            queue.RemoveFirst();
             if (queue.Count == 0)
                 ActivePings.Remove(steamID); // Remove empty queue
             
-            if(Pings.DebugMode == 2 && ping.Outline)
-                Debug.Log("[Pings: Outline] Removing outline: " + ping.Outline.GetInstanceID());
-            
             Destroy(ping.UIObject);
-            if (!OutlineIsUsed(ping.Outline)) Destroy(ping.Outline);
+            if (!ping.Outline || OutlineIsUsed(ping.Outline)) return;
+            if (Pings.DebugMode == 2) Debug.Log($"[Pings: Outline] Removing outline (ID: {ping.Outline.GetInstanceID()})");
+            Destroy(ping.Outline);
         }
         
         public static void RemoveAllPings()
@@ -250,7 +254,7 @@ namespace pings
                 if (outline)
                 {
                     if(Pings.DebugMode == 2)
-                        Debug.Log("[Pings: Outline] Reusing existing outline: " + outline.GetInstanceID());
+                        Debug.Log($"[Pings: Outline] Reusing existing outline (ID: {outline.GetInstanceID()})");
                     return outline; // If outline already exists for this object, reuse it
                 }
                 
@@ -260,7 +264,7 @@ namespace pings
                 outline.enabled = true;
             
                 if(Pings.DebugMode == 2)
-                    Debug.Log("[Pings: Outline] Creating new outline: " + outline.GetInstanceID());
+                    Debug.Log($"[Pings: Outline] Creating new outline (ID: {outline.GetInstanceID()})");
                 
                 return outline;
             }
