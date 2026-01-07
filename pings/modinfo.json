@@ -2,7 +2,7 @@
   "name": "Pings",
   "author": "Antidot",
   "description": "Adds a ping system to Raft, allowing players to mark locations or items of interest. Mod \"Extra Settings API\" (by Aidanamite) allows to change ping keybinds, duration and other things.",
-  "version": "3.1",
+  "version": "3.2",
   "license": "GNU AGPLv3",
   "icon": "icon.jpg",
   "banner": "banner.jpg",

@@ -114,6 +114,7 @@ namespace pings
                 var t = transformsList[i];
                 var item = (PickupItem)c;
                 var pickupName = item.PickupName;
+                // ReSharper disable once SwitchStatementMissingSomeEnumCasesNoDefault
                 switch (item.pickupItemType)
                 {
                     case PickupItemType.QuestItem:
