@@ -225,10 +225,11 @@ namespace pings
             if (queue.Count == 0)
                 ActivePings.Remove(steamID); // Remove empty queue
             
-            Destroy(ping.UIObject);
+            if(Pings.DebugMode == 2 && ping.Outline)
+                Debug.Log("[Pings: Outline] Removing outline: " + ping.Outline.GetInstanceID());
             
-            if (OutlineIsNotUsed(ping.Outline))
-                DestroyImmediate(ping.Outline);
+            Destroy(ping.UIObject);
+            if (!OutlineIsUsed(ping.Outline)) Destroy(ping.Outline);
         }
         
         public static void RemoveAllPings()
@@ -247,24 +248,27 @@ namespace pings
             try {
                 var outline = target.gameObject.GetComponent<Outline>();
                 if (outline)
-                    return outline; // If outline already exists for this object, return it
+                {
+                    if(Pings.DebugMode == 2)
+                        Debug.Log("[Pings: Outline] Reusing existing outline: " + outline.GetInstanceID());
+                    return outline; // If outline already exists for this object, reuse it
+                }
                 
                 outline = target.gameObject.AddComponent<Outline>();
                 outline.OutlineColor = Color.yellow;
                 outline.OutlineWidth = 7f;
                 outline.enabled = true;
             
+                if(Pings.DebugMode == 2)
+                    Debug.Log("[Pings: Outline] Creating new outline: " + outline.GetInstanceID());
+                
                 return outline;
             }
-            catch (Exception e)
-            {
-                Debug.LogError($"[Pings: Handling] Error creating outline for {target.name}: {e.Message}");
-                return null;
-            }
+            catch { return null; }
         }
         
-        private static bool OutlineIsNotUsed(Outline outline) =>
-        !outline || !(
+        private static bool OutlineIsUsed(Outline outline) =>
+        outline && (
             from queue in ActivePings.Values 
             from ping in queue 
             where ping.Outline == outline 
@@ -335,6 +339,7 @@ namespace pings
         #endregion
 
         #region Closest Collider at Hit Point
+        // For finding the closest transform for other players' pings
         private static readonly Collider[] Colliders = new Collider[128];
         public static Transform ClosestTransform(Vector3 worldPos)
         {
