@@ -234,7 +234,7 @@ namespace pings
             Destroy(ping.UIObject);
             if (!ping.Outline || OutlineIsUsed(ping.Outline)) return;
             if (Pings.DebugMode == 2) Debug.Log($"[Pings: Outline] Removing outline (ID: {ping.Outline.GetInstanceID()})");
-            DestroyImmediate(ping.Outline);
+            Destroy(ping.Outline);
         }
 
         private static void RemoveClosestToCursorPing()
@@ -251,7 +251,7 @@ namespace pings
             Destroy(ping.UIObject);
             if (!ping.Outline || OutlineIsUsed(ping.Outline)) return;
             if (Pings.DebugMode == 2) Debug.Log($"[Pings: Outline] Removing outline (ID: {ping.Outline.GetInstanceID()})");
-            DestroyImmediate(ping.Outline);
+            Destroy(ping.Outline);
 
             bool TryFindClosestPing(out CSteamID minSteamID, out LinkedListNode<PingInstance> minPing)
             {
