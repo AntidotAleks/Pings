@@ -49,6 +49,7 @@ namespace pings
             if (CanvasHelper.ActiveMenu != MenuType.None) return; // If any menu is open, ignore
             OnKeyPress(Pings.PingKey, CreatePing);
             OnKeyPress(Pings.ClearAllPingsKey, RemoveAllPings);
+            OnKeyPress(Pings.RemoveClosestPingKey, RemoveClosestToCursorPing);
         }
 
         private static void RemoveOldPings()
@@ -222,18 +223,60 @@ namespace pings
         
         private static void RemoveOldestPing(CSteamID steamID)
         {
-            if (!ActivePings.TryGetValue(steamID, out var queue) || queue.First is null) return; // Skip if no queue with pings exists from this player
-            var ping = queue.First.Value;
+            if (!ActivePings.TryGetValue(steamID, out var list) || list.First is null) return; // Skip if no queue with pings exists from this player
+            var ping = list.First.Value;
             
             
-            queue.RemoveFirst();
-            if (queue.Count == 0)
+            list.RemoveFirst();
+            if (list.Count == 0)
                 ActivePings.Remove(steamID); // Remove empty queue
             
             Destroy(ping.UIObject);
             if (!ping.Outline || OutlineIsUsed(ping.Outline)) return;
             if (Pings.DebugMode == 2) Debug.Log($"[Pings: Outline] Removing outline (ID: {ping.Outline.GetInstanceID()})");
-            Destroy(ping.Outline);
+            DestroyImmediate(ping.Outline);
+        }
+
+        private static void RemoveClosestToCursorPing()
+        {
+            if (!TryFindClosestPing(out var steamID, out var node))
+                return;
+            
+            ActivePings[steamID].Remove(node);
+            var ping = node.Value;
+            
+            if (ActivePings[steamID].Count == 0)
+                ActivePings.Remove(steamID); // Remove empty queue
+            
+            Destroy(ping.UIObject);
+            if (!ping.Outline || OutlineIsUsed(ping.Outline)) return;
+            if (Pings.DebugMode == 2) Debug.Log($"[Pings: Outline] Removing outline (ID: {ping.Outline.GetInstanceID()})");
+            DestroyImmediate(ping.Outline);
+
+            bool TryFindClosestPing(out CSteamID minSteamID, out LinkedListNode<PingInstance> minPing)
+            {
+                float maxDistance = Math.Min(Screen.width, Screen.height) / 4f;
+                var screenCenter = new Vector2(Screen.width / 2f, Screen.height / 2f);
+                
+                var minDistance = float.MaxValue;
+                minSteamID = default;
+                minPing = null;
+                
+                foreach (var (cSteamID,cList) in ActivePings) 
+                    for (var cNode = cList.First; cNode != null; cNode = cNode.Next)
+                    {
+                        var pointPos = Camera.WorldToScreenPoint(cNode.Value.WorldPosition);
+                        if (pointPos.z < 0) continue;
+                        float distance = Vector2.Distance(screenCenter, pointPos);
+                        if (distance >= minDistance) continue;
+
+                        minDistance = distance;
+                        minSteamID = cSteamID;
+                        minPing = cNode;
+                    }
+
+                return minPing != null && minDistance <= maxDistance;
+            }
         }
         
         public static void RemoveAllPings()

@@ -164,7 +164,14 @@ namespace pings
 
         internal static void UnloadAssets()
         {
+            
+            var allOutlines = FindObjectsOfType<Outline>(); // In case any outlines are left behind
+            if (allOutlines.Length > 0) Debug.Log($"Destroying {allOutlines.Length} outline(s)");
+            foreach (var outline in allOutlines)
+                DestroyImmediate(outline);
+            
             _asset?.Unload(true);
+            
             Destroy(Pings.OutlineMaterial);
             Destroy(Pings.FillMaterial);
         }

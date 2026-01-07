@@ -29,6 +29,11 @@
     },
     {
       "type": "keybind",
+      "name": "removeClosestPingKeybind",
+      "text": "Keybind to remove closest to cursor ping"
+    },
+    {
+      "type": "keybind",
       "name": "clearPingsKeybind",
       "text": "Keybind to clear all existing pings"
     },

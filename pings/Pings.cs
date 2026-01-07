@@ -96,6 +96,8 @@ namespace pings
         // Control
         public static Keybind PingKey { get; private set; } = new Keybind("pingKeybind", KeyCode.Mouse2);
         public static Keybind ClearAllPingsKey { get; private set; } = new Keybind("clearPingsKeybind", KeyCode.None);
+        public static Keybind RemoveClosestPingKey { get; private set; } = new Keybind("removeClosestPingKeybind", KeyCode.None);
+        
         public static float PingDuration { get; private set; } = 10f;
         public static int maxPingsPerPlayer = 1;
         // Visual
@@ -110,6 +112,7 @@ namespace pings
             // Control
             PingKey = ExtraSettingsAPI_GetKeybind("pingKeybind");
             ClearAllPingsKey = ExtraSettingsAPI_GetKeybind("clearPingsKeybind");
+            RemoveClosestPingKey = ExtraSettingsAPI_GetKeybind("removeClosestPingKeybind");
             PingDuration = PingDurationValues[Clamp((int) Math.Round(ExtraSettingsAPI_GetSliderValue("pingDuration")), 0, PingDurationValues.Length - 1)];
             maxPingsPerPlayer = (int) ExtraSettingsAPI_GetSliderValue("maxPingsPerPlayer");
             if (maxPingsPerPlayer == 11) // Unlimited
@@ -125,6 +128,7 @@ namespace pings
             // Visual
             PingKey = new Keybind("pingKeybind", KeyCode.Mouse2);
             ClearAllPingsKey = new Keybind("clearPingsKeybind", KeyCode.None);
+            RemoveClosestPingKey = new Keybind("removeClosestPingKeybind", KeyCode.None);
             PingDuration = 10f;
             maxPingsPerPlayer = 1;
             // Control
