@@ -3,6 +3,9 @@ using System.Collections.Generic;
 using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using JetBrains.Annotations;
+using pings.outlines;
+using pings.outlines.fancy;
+using pings.outlines.quick;
 using Steamworks;
 using UnityEngine;
 using static UnityEngine.Object;
@@ -15,21 +18,21 @@ namespace pings
         private static Canvas _canvas;
         private static GameObject _pingPrefab;
         
-        private static Camera Camera => Camera.main ?? Camera.current;
-        private static readonly Dictionary<CSteamID, LinkedList<PingInstance>> ActivePings = new Dictionary<CSteamID, LinkedList<PingInstance>>();
+        public static readonly Dictionary<CSteamID, LinkedList<PingInstance>> ActivePings = new Dictionary<CSteamID, LinkedList<PingInstance>>();
         
 
         private const float ScaleFactor = 10f;
         #endregion
         
         #region Ping Instance
-        private class PingInstance
+        public class PingInstance
         {
             public Transform HitTransform; // Transform of the hit object
             public Vector3 LocalPosition; // Relative position of the ping to the hit object
             public GameObject UIObject;
             public Setup.PingSubObjects SubObjects;
             public float SpawnTime;
+            public CSteamID SteamID;
             [CanBeNull] public Outline Outline;
 
             public Vector3 WorldPosition => HitTransform
@@ -76,7 +79,7 @@ namespace pings
                 rt.position = GetPointPosition(ping, out var direction);
                 SetPingShape(ping.SubObjects, direction);
 
-                var distance = Vector3.Distance(Camera.transform.position, ping.WorldPosition);
+                var distance = Vector3.Distance(Pings.Camera.transform.position, ping.WorldPosition);
                 var scale = Mathf.Clamp(1f / distance, 0.1f, 2.5f) * ScaleFactor;
                 rt.localScale = Vector3.one * scale;
             }
@@ -90,7 +93,7 @@ namespace pings
         
         private static void CreatePing()
         {
-            var ray = Camera.ScreenPointToRay(Input.mousePosition);
+            var ray = Pings.Camera.ScreenPointToRay(Input.mousePosition);
             if (!CastUtil.PingCast(ray, out var hit)) return; // If nothing hit, ignore
             
             var worldPos = hit.point;
@@ -107,7 +110,7 @@ namespace pings
         private static Vector3 GetPointPosition(PingInstance ping, out Vector3 direction)
         {
             var worldPos = ping.WorldPosition;
-            var pointPos = Camera.WorldToScreenPoint(worldPos);
+            var pointPos = Pings.Camera.WorldToScreenPoint(worldPos);
 
             // If point is on the screen
             
@@ -127,7 +130,7 @@ namespace pings
                 return posOnScreen;
             }
             
-            if (pointPos.z < 0) // Fix point position if it's behind the camera
+            if (pointPos.z < 0) // Fix point position if it's behind the Pings.Camera
             {
                 pointPos.x = Screen.width - pointPos.x;
                 pointPos.y = Screen.height - pointPos.y;
@@ -138,7 +141,7 @@ namespace pings
 
             // If looking away >90 degrees, move the point to the bottom of the screen
 
-            var angle = Vector3.SignedAngle((worldPos - Camera.transform.position).XZOnly(), Camera.transform.forward.XZOnly(), Vector3.up);
+            var angle = Vector3.SignedAngle((worldPos - Pings.Camera.transform.position).XZOnly(), Pings.Camera.transform.forward.XZOnly(), Vector3.up);
             var delta = Math.Max(Math.Abs(angle) - 90f, 0) / 90; // Value between 90 and 180 degrees away from point to [0, 1]
             delta = Mathf.SmoothStep(0, 1, delta);
             pointPos.Normalize();
@@ -212,7 +215,8 @@ namespace pings
                 UIObject = pingObject,
                 SubObjects = subObjects,
                 SpawnTime = Time.time,
-                Outline = CreateOutline(transformToOutline)
+                SteamID = steamID,
+                Outline = OutlineTools.CreateOutline(transformToOutline, steamID)
             };
     
             ActivePings[steamID].AddLast(newPing);
@@ -232,9 +236,7 @@ namespace pings
                 ActivePings.Remove(steamID); // Remove empty queue
             
             Destroy(ping.UIObject);
-            if (!ping.Outline || OutlineIsUsed(ping.Outline)) return;
-            if (Pings.DebugMode == 2) Debug.Log($"[Pings: Outline] Removing outline (ID: {ping.Outline.GetInstanceID()})");
-            Destroy(ping.Outline);
+            OutlineTools.RemoveOutline(ping);
         }
 
         private static void RemoveClosestToCursorPing()
@@ -249,9 +251,7 @@ namespace pings
                 ActivePings.Remove(steamID); // Remove empty queue
             
             Destroy(ping.UIObject);
-            if (!ping.Outline || OutlineIsUsed(ping.Outline)) return;
-            if (Pings.DebugMode == 2) Debug.Log($"[Pings: Outline] Removing outline (ID: {ping.Outline.GetInstanceID()})");
-            Destroy(ping.Outline);
+            OutlineTools.RemoveOutline(ping);
 
             bool TryFindClosestPing(out CSteamID minSteamID, out LinkedListNode<PingInstance> minPing)
             {
@@ -265,7 +265,7 @@ namespace pings
                 foreach (var (cSteamID,cList) in ActivePings) 
                     for (var cNode = cList.First; cNode != null; cNode = cNode.Next)
                     {
-                        var pointPos = Camera.WorldToScreenPoint(cNode.Value.WorldPosition);
+                        var pointPos = Pings.Camera.WorldToScreenPoint(cNode.Value.WorldPosition);
                         if (pointPos.z < 0) continue;
                         float distance = Vector2.Distance(screenCenter, pointPos);
                         if (distance >= minDistance) continue;
@@ -284,44 +284,6 @@ namespace pings
             while (ActivePings.Count > 0)
                 RemoveOldestPing(ActivePings.First().Key);
         }
-        #endregion
-
-        #region Outlines
-        [CanBeNull]
-        private static Outline CreateOutline(Transform target)
-        {
-            if (!target) return null;
-
-            try {
-                var outline = target.gameObject.GetComponent<Outline>();
-                if (outline)
-                {
-                    if(Pings.DebugMode == 2)
-                        Debug.Log($"[Pings: Outline] Reusing existing outline (ID: {outline.GetInstanceID()})");
-                    return outline; // If outline already exists for this object, reuse it
-                }
-                
-                outline = target.gameObject.AddComponent<Outline>();
-                outline.OutlineColor = Color.yellow;
-                outline.OutlineWidth = 7f;
-                outline.enabled = true;
-            
-                if(Pings.DebugMode == 2)
-                    Debug.Log($"[Pings: Outline] Creating new outline (ID: {outline.GetInstanceID()})");
-                
-                return outline;
-            }
-            catch { return null; }
-        }
-        
-        private static bool OutlineIsUsed(Outline outline) =>
-        outline && (
-            from queue in ActivePings.Values 
-            from ping in queue 
-            where ping.Outline == outline 
-            select ping.Outline
-        ).FirstOrDefault();
-
         #endregion
 
         #region Setup and Cleanup
@@ -351,7 +313,7 @@ namespace pings
                                    | (1 << 19) // Remote Player
                                    | (1 << 20) // Local Player
                                    | (1 << 21) // Particles
-                                   | (1 << 24)); // Hand Camera
+                                   | (1 << 24)); // Hand Pings.Camera
 
         /// <summary>
         /// Performs a cone cast by doubling radius and distance from start on each iteration, up to 7 times.

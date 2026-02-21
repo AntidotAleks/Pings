@@ -1,8 +1,8 @@
 {
   "name": "Pings",
   "author": "Antidot",
-  "description": "Adds a ping system to Raft, allowing players to mark locations or items of interest. Mod \"Extra Settings API\" (by Aidanamite) allows to change ping keybinds, duration and other things.",
-  "version": "3.2",
+  "description": "Adds a ping system to Raft, allowing players to mark locations or items of interest. Mod \"Extra Settings API\" (by Aidanamite) allows to change ping keybinds, duration, color and other things.",
+  "version": "3.3",
   "license": "GNU AGPLv3",
   "icon": "icon.jpg",
   "banner": "banner.jpg",
@@ -77,7 +77,66 @@
       "type": "seperator",
       "section": "section-visual"
     },
+
+    {
+      "type": "combobox",
+      "name": "outlineStyle",
+      "text": "Outline Style",
+      "values": [ "Disabled", "Quick", "Fancy" ],
+      "default": "Fancy",
+      "member": "UpdateMenu", "memberRealtime": true
+    },
+
+    {
+      "type": "checkbox",
+      "name": "uniquePingColors",
+      "access": "globalcustom",
+      "text": "Use unique colors for different players' pings",
+      "default": false,
+      "member": "UpdateMenu", "memberRealtime": true
+    },
+    {
+      "type": "input",
+      "name": "colorDefault",
+      "access": "globalcustom",
+      "text": "Ping color",
+      "default": "#ffee22",
+      "max": 7,
+      "resetButton": true
+    },
     
+    {
+      "type": "checkbox",
+      "name": "separateOwnPingColor",
+      "access": "globalcustom",
+      "text": "Use separate color for own pings",
+      "default": false,
+      "member": "UpdateMenu", "memberRealtime": true
+    },
+    {
+      "type": "input",
+      "name": "colorOwn",
+      "access": "globalcustom",
+      "text": "Own ping color",
+      "default": "#aaa",
+      "max": 7,
+      "resetButton": true
+    },
+
+    {
+      "type": "slider",
+      "name": "outlineThickness",
+      "access": "globalcustom",
+      "text": "Outline Thickness",
+      "default": 1,
+      "range": {
+        "min": 0.1,
+        "max": 5,
+        "decimals": 0,
+        "type": "percent"
+      }
+    },
+
     {
       "type": "checkbox",
       "name": "showEdgePingAsArrow",

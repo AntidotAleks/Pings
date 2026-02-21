@@ -37,9 +37,13 @@
     <WarningLevel>4</WarningLevel>
   </PropertyGroup>
   <ItemGroup>
-    <Compile Include="misc\Outline.cs" />
     <Compile Include="misc\TranslationCheck.cs" />
     <Compile Include="Networking.cs" />
+    <Compile Include="outlines\fancy\FancyOutline.cs" />
+    <Compile Include="outlines\fancy\FancyOutlineOnCamera.cs" />
+    <Compile Include="outlines\fancy\FancyOutlineOnCamera.csold" />
+    <Compile Include="outlines\Outline.cs" />
+    <Compile Include="outlines\quick\QuickOutline.cs" />
     <Compile Include="PingData.cs" />
     <Compile Include="PingManager.cs" />
     <Compile Include="Pings.cs" />
@@ -151,8 +155,10 @@
 <HintPath>C:\Users\Aleks\AppData\Roaming\RaftModLoader\binaries\HMLCoreLibrary.dll</HintPath></Reference>
   </ItemGroup>
   <ItemGroup>
-    <Content Include="lang.csv" />
-    <Content Include="misc\outline.assets" />
+    <Content Include="misc\lang.csv" />
+    <Content Include="outlines\fancy\FancyOutline.assets" />
+    <Content Include="outlines\fancy\LICENSE" />
+    <Content Include="outlines\quick\QuickOutline.assets" />
   </ItemGroup>
   <PropertyGroup>
     <PreBuildEvent>

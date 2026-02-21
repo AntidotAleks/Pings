@@ -1,10 +1,17 @@
-﻿using System.Collections;
+﻿using System;
+using System.Collections;
 using System.Collections.Generic;
 using System.Linq;
 using System.Text;
 using I2.Loc;
+using pings.outlines;
+using pings.outlines.fancy;
+using pings.outlines.quick;
+using Sirenix.Utilities;
+using UltimateWater;
 using UnityEngine;
 using UnityEngine.UI;
+using Outline = pings.outlines.Outline;
 
 namespace pings
 {
@@ -142,24 +149,45 @@ namespace pings
                 return;
             }
             
-            var langCsv = Encoding.UTF8.GetString(Pings.mod.GetEmbeddedFileBytes("lang.csv"));
+            var langCsv = Encoding.UTF8.GetString(Pings.mod.GetEmbeddedFileBytes("misc/lang.csv"));
             source.Import_CSV(null, langCsv, eSpreadsheetUpdateMode.Merge, ';');
         }
 
         
-        private static AssetBundle _asset;
+        private static AssetBundle _assetQuick, _assetFancy;
         internal static IEnumerator LoadAssets()
         {
             // Quick Outline
             // https://assetstore.unity.com/packages/tools/particles-effects/quick-outline-115488
             
-            var request = AssetBundle.LoadFromMemoryAsync(Pings.mod.GetEmbeddedFileBytes("misc/outline.assets"));
+            var request = AssetBundle.LoadFromMemoryAsync(Pings.mod.GetEmbeddedFileBytes("outlines/quick/QuickOutline.assets"));
             yield return request;
             
-            _asset = request.assetBundle;
-            Pings.OutlineMaterial = _asset.LoadAsset<Material>("OutlineMask");
-            Pings.FillMaterial = _asset.LoadAsset<Material>("OutlineFill");
+            _assetQuick = request.assetBundle;
+            try {
+                QuickOutlineBundle.OutlineMaterial = _assetQuick.LoadAsset<Material>("OutlineMask");
+                QuickOutlineBundle.FillMaterial = _assetQuick.LoadAsset<Material>("OutlineFill");
+            } catch (Exception ex) { Debug.LogError($"[Pings: Setup] Failed to load Quick Outline Materials: {ex}"); }
+            _assetQuick?.Unload(false);
 
+            if (!QuickOutlineBundle.OutlineMaterial) Debug.LogError("[Pings: Setup] Failed to load Quick Outline Material");
+            if (!QuickOutlineBundle.FillMaterial) Debug.LogError("[Pings: Setup] Failed to load Quick Outline Fill Material");
+            
+            // Fancy Outline
+            // https://github.com/cakeslice/Outline-Effect
+            
+            request = AssetBundle.LoadFromMemoryAsync(Pings.mod.GetEmbeddedFileBytes("outlines/fancy/FancyOutline.assets"));
+            yield return request;
+            
+            _assetFancy = request.assetBundle;
+            try {
+                FancyOutlineBundle.BufferShader = _assetFancy.LoadAsset<Shader>("BufferShader");
+                FancyOutlineBundle.OutlineShader = _assetFancy.LoadAsset<ComputeShader>("OutlineShader");
+            } catch (Exception ex) { Debug.LogError($"[Pings: Setup] Failed to load Fancy Outline Materials: {ex}"); }
+            _assetFancy?.Unload(false);
+        
+            if (!FancyOutlineBundle.BufferShader) Debug.LogError("[Pings: Setup] Failed to load Fancy Outline Buffer Shader");
+            if (!FancyOutlineBundle.OutlineShader) Debug.LogError("[Pings: Setup] Failed to load Fancy Outline Compute Shader");
         }
 
         internal static void UnloadAssets()
@@ -172,11 +200,13 @@ namespace pings
                 outline.enabled = false;
                 DestroyImmediate(outline);
             }
+            Pings.Camera.gameObject.GetComponents<FancyOutlineOnCamera>()?.ForEach(DestroyImmediate);
             
-            _asset?.Unload(true);
+            Destroy(QuickOutlineBundle.OutlineMaterial);
+            Destroy(QuickOutlineBundle.FillMaterial);
             
-            Destroy(Pings.OutlineMaterial);
-            Destroy(Pings.FillMaterial);
+            Destroy(FancyOutlineBundle.BufferShader);
+            Destroy(FancyOutlineBundle.OutlineShader);
         }
     }
 }

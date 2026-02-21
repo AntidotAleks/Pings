@@ -11,11 +11,14 @@ using System.Collections.Generic;
 using System.Linq;
 using UnityEngine;
 
-namespace pings
+namespace pings.outlines.quick
 {
   [DisallowMultipleComponent]
 
-  public class Outline : MonoBehaviour {
+  public class QuickOutline : Outline {
+    public override void SetColor(Color color) => outlineColor = color;
+    
+    
     private static HashSet<Mesh> registeredMeshes = new HashSet<Mesh>();
 
     public enum Mode {
@@ -39,13 +42,13 @@ namespace pings
         needsUpdate = true;
       }
     }
-
-    public float OutlineWidth {
-      set {
-        outlineWidth = value;
-        needsUpdate = true;
-      }
-    }
+    
+    // public float OutlineWidth {
+    //   set {
+    //     outlineWidth = value;
+    //     needsUpdate = true;
+    //   }
+    // }
 
     [Serializable]
     private class ListVector3 {
@@ -58,8 +61,8 @@ namespace pings
     [SerializeField]
     private Color outlineColor = Color.white;
 
-    [SerializeField, Range(0f, 10f)]
-    private float outlineWidth = 2f;
+    private static float outlineWidth => 7f * Pings.OutlineThicknessMultiplier;
+    
 
     [Header("Optional")]
 
@@ -85,8 +88,8 @@ namespace pings
       renderers = GetComponentsInChildren<Renderer>();
 
       // Instantiate outline materials
-      outlineMaskMaterial = Pings.OutlineMaterial;
-      outlineFillMaterial = Pings.FillMaterial;
+      outlineMaskMaterial = QuickOutlineBundle.OutlineMaterial;
+      outlineFillMaterial = QuickOutlineBundle.FillMaterial;
 
       outlineMaskMaterial.name = "OutlineMask (Instance)";
       outlineFillMaterial.name = "OutlineFill (Instance)";
