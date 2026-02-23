@@ -1,6 +1,6 @@
 ﻿using System;
-using Steamworks;
 using UnityEngine;
+using UnityEngine.Serialization;
 
 namespace pings
 {
@@ -74,8 +74,8 @@ namespace pings
                     if (!(message is PingMessage pingMessage))
                         break; // Ensure the message is of type PingMessage
                     
-                    var senderSteamID = pingMessage.steamID;
-                    if (senderSteamID == Pings.SteamID)
+                    UserID senderSteamID = pingMessage.id;
+                    if (senderSteamID == Pings.CurrentUserID)
                         break;
                         // Ignore relayed own pings (self -> host -> self)
 
@@ -86,7 +86,7 @@ namespace pings
                     
                     var hitTransform = CastUtil.ClosestTransform(position); // Find the closest transform to the ping position
                     if (Pings.DebugMode >= 2)
-                        Debug.Log($"[Pings: Networking] Received a ping packet at {position} from player {RAPI.GetUsernameFromSteamID(senderSteamID)}.");
+                        Debug.Log($"[Pings: Networking] Received a ping packet at {position} from player {senderSteamID.GetUsername()}.");
                     PingManager.CreatePing(senderSteamID, position, hitTransform);
                     break;
                 
@@ -104,15 +104,14 @@ namespace pings
     public class PingMessage : Message
     {
         public string positionStr;
-
-        public CSteamID steamID;
+        public ulong id;
 
         // Sending player's SteamID through the message since network messages don't carry it on relay
-        public PingMessage(Vector3 position, CSteamID steamID)
+        public PingMessage(Vector3 position, UserID id)
             : base((Messages)MessageTypes.Ping)
         {
             positionStr = position.x + "|" + position.y + "|" + position.z; // Serialize position as a string
-            this.steamID = steamID;
+            this.id = id;
         }
 
         public Vector3 Position()

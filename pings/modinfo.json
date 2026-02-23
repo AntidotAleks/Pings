@@ -25,17 +25,20 @@
       "type": "keybind",
       "name": "pingKeybind",
       "text": "Keybind to ping",
-      "mainDefault": "Mouse2"
+      "mainDefault": "Mouse2",
+      "member": "PingKey"
     },
     {
       "type": "keybind",
       "name": "removeClosestPingKeybind",
-      "text": "Keybind to remove closest to cursor ping"
+      "text": "Keybind to remove closest to cursor ping",
+      "member": "RemoveClosestPingKey"
     },
     {
       "type": "keybind",
       "name": "clearPingsKeybind",
-      "text": "Keybind to clear all existing pings"
+      "text": "Keybind to clear all existing pings",
+      "member": "RemoveAllPingsKey"
     },
     {
       "type": "slider",
@@ -47,7 +50,8 @@
         "max": 14,
         "decimals": 0,
         "type": "custom"
-      }
+      },
+      "member": "PingDuration"
     },
     {
       "type": "slider",
@@ -59,7 +63,8 @@
         "max": 11,
         "decimals": 0,
         "type": "custom"
-      }
+      },
+      "member": "MaxPingsPerPlayer"
     },
     {
       "type": "seperator",
@@ -84,7 +89,7 @@
       "text": "Outline Style",
       "values": [ "Disabled", "Quick", "Fancy" ],
       "default": "Fancy",
-      "member": "UpdateMenu", "memberRealtime": true
+      "member": "Style"
     },
 
     {
@@ -93,7 +98,7 @@
       "access": "globalcustom",
       "text": "Use unique colors for different players' pings",
       "default": false,
-      "member": "UpdateMenu", "memberRealtime": true
+      "member": "UniquePingColors"
     },
     {
       "type": "input",
@@ -101,8 +106,13 @@
       "access": "globalcustom",
       "text": "Ping color",
       "default": "#ffee22",
-      "max": 7,
-      "resetButton": true
+      "mode": "custom",
+      "resetButton": true,
+      "member": "PingColorHex",
+      "tooltip": [
+        "Accepts hex color codes (3 or 6 characters, with or without #).",
+        "in format '#RRGGBB', '#RGB', 'RRGGBB' or 'RGB', where R, G and B are hexadecimal digits (0-9 and A-F)."
+      ]
     },
     
     {
@@ -111,7 +121,7 @@
       "access": "globalcustom",
       "text": "Use separate color for own pings",
       "default": false,
-      "member": "UpdateMenu", "memberRealtime": true
+      "member": "HasOwnPingColor"
     },
     {
       "type": "input",
@@ -119,8 +129,14 @@
       "access": "globalcustom",
       "text": "Own ping color",
       "default": "#aaa",
+      "mode": "custom",
       "max": 7,
-      "resetButton": true
+      "resetButton": true,
+      "member": "OwnPingColorHex",
+      "tooltip": [
+        "Accepts hex color codes (3 or 6 characters, with or without #).",
+        "in format '#RRGGBB', '#RGB', 'RRGGBB' or 'RGB', where R, G and B are hexadecimal digits (0-9 and A-F)."
+      ]
     },
 
     {
@@ -134,7 +150,8 @@
         "max": 5,
         "decimals": 0,
         "type": "percent"
-      }
+      },
+      "member": "OutlineThicknessMultiplier"
     },
 
     {
@@ -142,7 +159,8 @@
       "name": "showEdgePingAsArrow",
       "section": "visual",
       "text": "Show pings on edge of screen as arrow",
-      "default": true
+      "default": true,
+      "member": "ShowEdgePingAsArrow"
     },
     
     
@@ -161,7 +179,8 @@
         "Disabled",
         "Normal",
         "Detailed"
-      ]
+      ],
+      "member": "DebugMode"
     }
   ]
 }

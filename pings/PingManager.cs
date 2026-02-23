@@ -4,9 +4,6 @@ using System.Diagnostics.CodeAnalysis;
 using System.Linq;
 using JetBrains.Annotations;
 using pings.outlines;
-using pings.outlines.fancy;
-using pings.outlines.quick;
-using Steamworks;
 using UnityEngine;
 using static UnityEngine.Object;
 
@@ -18,7 +15,7 @@ namespace pings
         private static Canvas _canvas;
         private static GameObject _pingPrefab;
         
-        public static readonly Dictionary<CSteamID, LinkedList<PingInstance>> ActivePings = new Dictionary<CSteamID, LinkedList<PingInstance>>();
+        public static readonly Dictionary<ulong, LinkedList<PingInstance>> ActivePings = new Dictionary<ulong, LinkedList<PingInstance>>();
         
 
         private const float ScaleFactor = 10f;
@@ -32,7 +29,7 @@ namespace pings
             public GameObject UIObject;
             public Setup.PingSubObjects SubObjects;
             public float SpawnTime;
-            public CSteamID SteamID;
+            public ulong ID;
             [CanBeNull] public Outline Outline;
 
             public Vector3 WorldPosition => HitTransform
@@ -51,7 +48,7 @@ namespace pings
             
             if (CanvasHelper.ActiveMenu != MenuType.None) return; // If any menu is open, ignore
             OnKeyPress(Pings.PingKey, CreatePing);
-            OnKeyPress(Pings.ClearAllPingsKey, RemoveAllPings);
+            OnKeyPress(Pings.RemoveAllPingsKey, RemoveAllPings);
             OnKeyPress(Pings.RemoveClosestPingKey, RemoveClosestToCursorPing);
         }
 
@@ -85,9 +82,9 @@ namespace pings
             }
         }
         
-        private static void OnKeyPress(Keybind keybind, Action action)
+        private static void OnKeyPress(string keybind, Action action)
         {
-            if (Input.GetKeyDown(keybind.MainKey) || Input.GetKeyDown(keybind.AltKey))
+            if (MyInput.GetButtonDown(keybind)) 
                 action();
         }
         
@@ -97,9 +94,9 @@ namespace pings
             if (!CastUtil.PingCast(ray, out var hit)) return; // If nothing hit, ignore
             
             var worldPos = hit.point;
-            var p = new PingMessage(worldPos, Pings.SteamID);
+            var p = new PingMessage(worldPos, Pings.CurrentUserID);
             RAPI.SendNetworkMessage(p, Pings.ModChannel); // Send ping to other players
-            CreatePing(Pings.SteamID, worldPos, CastUtil.ClosestTransform(worldPos)); 
+            CreatePing(Pings.CurrentUserID, worldPos, CastUtil.ClosestTransform(worldPos)); 
         }
         #endregion
 
@@ -190,12 +187,12 @@ namespace pings
         #endregion
 
         #region Ping Creation and Removal
-        internal static void CreatePing(CSteamID steamID, Vector3 worldPos, Transform hitTransform)
+        internal static void CreatePing(ulong id, Vector3 worldPos, Transform hitTransform)
         {
             if (!hitTransform) return;
             
-            if (!ActivePings.TryGetValue(steamID, out _))
-                ActivePings[steamID] = new LinkedList<PingInstance>();
+            if (!ActivePings.TryGetValue(id, out _))
+                ActivePings[id] = new LinkedList<PingInstance>();
             
             // Get ping data (name and transform)
             var (pingName, transformToOutline) = PingData.GetPingData(hitTransform, worldPos);
@@ -215,25 +212,25 @@ namespace pings
                 UIObject = pingObject,
                 SubObjects = subObjects,
                 SpawnTime = Time.time,
-                SteamID = steamID,
-                Outline = OutlineTools.CreateOutline(transformToOutline, steamID)
+                ID = id,
+                Outline = OutlineTools.CreateOutline(transformToOutline, id)
             };
     
-            ActivePings[steamID].AddLast(newPing);
+            ActivePings[id].AddLast(newPing);
             
-            if (ActivePings[steamID].Count > Pings.maxPingsPerPlayer)
-                RemoveOldestPing(steamID); // Remove existing ping for this player, if at max capacity
+            if (ActivePings[id].Count > Pings.MaxPingsPerPlayer)
+                RemoveOldestPing(id); // Remove existing ping for this player, if at max capacity
         }
         
-        private static void RemoveOldestPing(CSteamID steamID)
+        private static void RemoveOldestPing(ulong id)
         {
-            if (!ActivePings.TryGetValue(steamID, out var list) || list.First is null) return; // Skip if no queue with pings exists from this player
+            if (!ActivePings.TryGetValue(id, out var list) || list.First is null) return; // Skip if no queue with pings exists from this player
             var ping = list.First.Value;
             
             
             list.RemoveFirst();
             if (list.Count == 0)
-                ActivePings.Remove(steamID); // Remove empty queue
+                ActivePings.Remove(id); // Remove empty queue
             
             Destroy(ping.UIObject);
             OutlineTools.RemoveOutline(ping);
@@ -253,13 +250,13 @@ namespace pings
             Destroy(ping.UIObject);
             OutlineTools.RemoveOutline(ping);
 
-            bool TryFindClosestPing(out CSteamID minSteamID, out LinkedListNode<PingInstance> minPing)
+            bool TryFindClosestPing(out ulong minID, out LinkedListNode<PingInstance> minPing)
             {
                 float maxDistance = Math.Min(Screen.width, Screen.height) / 4f;
                 var screenCenter = new Vector2(Screen.width / 2f, Screen.height / 2f);
                 
                 var minDistance = float.MaxValue;
-                minSteamID = default;
+                minID = 0;
                 minPing = null;
                 
                 foreach (var (cSteamID,cList) in ActivePings) 
@@ -271,7 +268,7 @@ namespace pings
                         if (distance >= minDistance) continue;
 
                         minDistance = distance;
-                        minSteamID = cSteamID;
+                        minID = cSteamID;
                         minPing = cNode;
                     }
 

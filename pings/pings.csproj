@@ -41,13 +41,13 @@
     <Compile Include="Networking.cs" />
     <Compile Include="outlines\fancy\FancyOutline.cs" />
     <Compile Include="outlines\fancy\FancyOutlineOnCamera.cs" />
-    <Compile Include="outlines\fancy\FancyOutlineOnCamera.csold" />
     <Compile Include="outlines\Outline.cs" />
     <Compile Include="outlines\quick\QuickOutline.cs" />
     <Compile Include="PingData.cs" />
     <Compile Include="PingManager.cs" />
     <Compile Include="Pings.cs" />
     <Compile Include="misc\Setup.cs" />
+    <Compile Include="UserID.cs" />
   </ItemGroup>
   <ItemGroup>
     <Folder Include="Properties\" />

@@ -4,7 +4,6 @@ using JetBrains.Annotations;
 using pings.outlines.fancy;
 using pings.outlines.quick;
 using Sirenix.Utilities;
-using Steamworks;
 using UltimateWater;
 using UnityEngine;
 using Object = UnityEngine.Object;
@@ -26,13 +25,13 @@ namespace pings.outlines
     public static class OutlineTools
     {
         [CanBeNull]
-        public static Outline CreateOutline(Transform target, CSteamID steamID)
+        public static Outline CreateOutline(Transform target, ulong id)
         {
             if (!target || Pings.Style == OutlineStyle.Disabled) return null;
 
             try {
                 var outline = GetOrCreateOutlineComponent(target.gameObject);
-                outline.SetColor(GetColor(steamID));
+                outline.SetColor(GetColor(id));
                 outline.enabled = true;
             
                 if(Pings.DebugMode == 2) Debug.Log($"[Pings: Outline] Using outline (ID: {outline.GetInstanceID()})");
@@ -106,10 +105,10 @@ namespace pings.outlines
             ).FirstOrDefault();
 
 
-        private static Color GetColor(CSteamID steamID)
+        private static Color GetColor(ulong id)
         {
             // return Color.HSVToRGB(Random.value, .7f+Random.value*.2f, .8f+Random.value*.2f); // Test
-            bool isSelf = steamID == Pings.SteamID;
+            bool isSelf = id == Pings.CurrentUserID;
             
             switch (Pings.Style)
             {
@@ -119,7 +118,7 @@ namespace pings.outlines
                     if (isSelf && Pings.HasOwnPingColor)
                         return Pings.OwnPingColor;
                     return Pings.UniquePingColors ? 
-                        Color.HSVToRGB((steamID.m_SteamID % 1000) / 1000f, 0.8f, 1) 
+                        Color.HSVToRGB((id % 1000) / 1000f, 0.8f, 1) 
                         : Pings.PingColor;
 
                 default: throw new ArgumentOutOfRangeException();
