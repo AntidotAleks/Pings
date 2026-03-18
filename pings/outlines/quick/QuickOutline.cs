@@ -61,7 +61,7 @@ namespace pings.outlines.quick
     [SerializeField]
     private Color outlineColor = Color.white;
 
-    private static float outlineWidth => 7f * Pings.OutlineThicknessMultiplier;
+    private static float outlineWidth => 7f * PSettings.OutlineThicknessMultiplier;
     
 
     [Header("Optional")]
@@ -153,8 +153,7 @@ namespace pings.outlines.quick
         } 
         catch (Exception e) 
         {
-          if (Pings.DebugMode >= 2)
-            Debug.LogWarning($"[Pings: Outline] Failed to remove outline materials from renderer {renderer.name}: {e.Message}");
+          Pings.LogWarning($"Failed to remove outline materials from renderer {renderer.name}: {e.Message}", 2, "Outline");
         }
       }
     }

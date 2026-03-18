@@ -2,7 +2,7 @@
   "name": "Pings",
   "author": "Antidot",
   "description": "Adds a ping system to Raft, allowing players to mark locations or items of interest. Mod \"Extra Settings API\" (by Aidanamite) allows to change ping keybinds, duration, color and other things.",
-  "version": "3.3",
+  "version": "3.4",
   "license": "GNU AGPLv3",
   "icon": "icon.jpg",
   "banner": "banner.jpg",
@@ -104,14 +104,13 @@
       "type": "input",
       "name": "colorDefault",
       "access": "globalcustom",
-      "text": "Ping color",
-      "default": "#ffee22",
       "mode": "custom",
+      "text": "Ping color",
+      "default": "[<color=#FFEE22>▐█▌</color>] #FFEE22<color=#816f49></color>",
       "resetButton": true,
-      "member": "PingColorHex",
       "tooltip": [
-        "Accepts hex color codes (3 or 6 characters, with or without #).",
-        "in format '#RRGGBB', '#RGB', 'RRGGBB' or 'RGB', where R, G and B are hexadecimal digits (0-9 and A-F)."
+        "Accepts hex color codes as '#RRGGBB' or '#RGB',",
+        "where R, G and B are hexadecimal digits (0-9 and A-F)."
       ]
     },
     
@@ -127,15 +126,13 @@
       "type": "input",
       "name": "colorOwn",
       "access": "globalcustom",
-      "text": "Own ping color",
-      "default": "#aaa",
       "mode": "custom",
-      "max": 7,
+      "text": "Own ping color",
+      "default": "[<color=#AAAAAA>▐█▌</color>] #AAA<color=#816f49>___</color>",
       "resetButton": true,
-      "member": "OwnPingColorHex",
       "tooltip": [
-        "Accepts hex color codes (3 or 6 characters, with or without #).",
-        "in format '#RRGGBB', '#RGB', 'RRGGBB' or 'RGB', where R, G and B are hexadecimal digits (0-9 and A-F)."
+        "Accepts hex color codes as '#RRGGBB' or '#RGB',",
+        "where R, G and B are hexadecimal digits (0-9 and A-F)."
       ]
     },
 

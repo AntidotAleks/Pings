@@ -33,8 +33,7 @@ namespace pings
             if (str != null)
                 return (str, hitTransform); // If we found a specific type, return it
             
-            if (Pings.DebugMode >= 1)
-                Debug.Log("No specific type found for path, using default ping.");
+            Pings.Log("No specific type found for path, using default ping.", 1);
             
             
             return (TermPing, hitTransform); // Default ping
@@ -42,10 +41,10 @@ namespace pings
             
             void PathDebug()
             {
-                if (Pings.DebugMode < 1) return;
-                Debug.Log($"[Pings: Handling] Ping at {worldPos}" + (Pings.DebugMode == 1 ? $" on path {path}":". Ping path and components (from top to root):"));
+                if (PSettings.DebugMode < 1) return;
+                Pings.Log($"Ping at {worldPos}" + (PSettings.DebugMode == 1 ? $" on path {path}":". Ping path and components (from top to root):", "Handling"));
                 
-                if (Pings.DebugMode < 2) return;
+                if (PSettings.DebugMode < 2) return;
                 var t = hitTransform;
                 while (t)
                 {
@@ -103,8 +102,7 @@ namespace pings
                 var key = KeyString(c.name.Substring("Pickup_Landmark_".Length)); // Remove "Pickup_Landmark_" prefix
                 if (TryTranslate("ModPings/Trees/" + key, out var output))
                     return (t, output);
-                if (Pings.DebugMode >= 1)
-                    Debug.Log($"[Pings: Localization] No translation found for HarvestableTree using key ModPings/Trees/{key}");
+                Pings.Log($"No translation found for HarvestableTree using key ModPings/Trees/{key}", 1, "Localization");
                 return (t, KeyToCleanString(key));
             }},
             #endregion
@@ -125,8 +123,7 @@ namespace pings
                         if (TryTranslate("ModPings/Notes/" + itemName, out var noteOutput))
                             return (t, Translate("ModPings/Substring/Note")+noteOutput);
                         
-                        if (Pings.DebugMode >= 1)
-                            Debug.Log($"[Pings: Localization] No translation found for Note using key ModPings/Notes/{itemName}");
+                        Pings.Log($"[Pings: Localization] No translation found for Note using key ModPings/Notes/{itemName}", 1, "Localization");
                         
                         pickupName = Translate("ModPings/Substring/Note") + CleanString(t.name.Substring(t.name.LastIndexOf('_') + 1));
                         break;
@@ -145,8 +142,7 @@ namespace pings
                 if (TryTranslate("ModPings/QuestInteractable/" +
                                  (key = KeyString(q.name.Replace("Quest", "").Replace("Interactable", ""))), 
                         out var output)) return (t, output);
-                if (Pings.DebugMode >= 1)
-                    Debug.Log($"[Pings: Localization] No translation found for QuestInteractable using key ModPings/QuestInteractable/{key}");
+                Pings.Log($"No translation found for QuestInteractable using key ModPings/QuestInteractable/{key}", 1, "Localization");
                 return (t, KeyToCleanString(key));
             }},
             #endregion
@@ -178,8 +174,7 @@ namespace pings
                 if (!LandmarkDictionary.TryGetValue(landmarkName, out var landmarkData) &&
                     !landmarkName.Contains("Small") && !landmarkName.Contains("Big"))
                 {
-                    if (Pings.DebugMode >= 2)
-                        Debug.Log($"[Pings: Localization] Landmark \"{landmarkName}\" is not in the dictionary");
+                    Pings.Log($"Landmark \"{landmarkName}\" is not in the dictionary", 2, "Localization");
                     return (null, null);
                 }
                 
@@ -192,10 +187,10 @@ namespace pings
                     return (null, output); // If translation is found
                     
                 // If no translation is found
-                if (Pings.DebugMode >= 1)
-                    Debug.Log($"[Pings: Localization] No translation found for {landmarkData.Name} Landmark using key ModPings/Landmark/{landmarkData.Name}/" +
-                              $"{string.Join("/", transformsList.Take(i - landmarkData.Offset + 1).Reverse().Select(tr => KeyString(tr.name)).ToList())} or its parents");
-                
+                Pings.Log($"No translation found for {landmarkData.Name} Landmark using key ModPings/Landmark/{landmarkData.Name}/" +
+                          $"{string.Join("/", transformsList.Take(i - landmarkData.Offset + 1).Reverse().Select(tr => KeyString(tr.name)).ToList())} or its parents", 
+                    1, "Localization");
+                 
                 return (null, CleanString(t.name));
             }}
             #endregion

@@ -15,7 +15,7 @@ namespace pings
         private static Canvas _canvas;
         private static GameObject _pingPrefab;
         
-        public static readonly Dictionary<ulong, LinkedList<PingInstance>> ActivePings = new Dictionary<ulong, LinkedList<PingInstance>>();
+        public static readonly Dictionary<Network_UserId, LinkedList<PingInstance>> ActivePings = new Dictionary<Network_UserId, LinkedList<PingInstance>>();
         
 
         private const float ScaleFactor = 10f;
@@ -29,7 +29,6 @@ namespace pings
             public GameObject UIObject;
             public Setup.PingSubObjects SubObjects;
             public float SpawnTime;
-            public ulong ID;
             [CanBeNull] public Outline Outline;
 
             public Vector3 WorldPosition => HitTransform
@@ -47,9 +46,9 @@ namespace pings
             UpdatePingPositions();
             
             if (CanvasHelper.ActiveMenu != MenuType.None) return; // If any menu is open, ignore
-            OnKeyPress(Pings.PingKey, CreatePing);
-            OnKeyPress(Pings.RemoveAllPingsKey, RemoveAllPings);
-            OnKeyPress(Pings.RemoveClosestPingKey, RemoveClosestToCursorPing);
+            OnKeyPress(PSettings.PingKey, CreatePing);
+            OnKeyPress(PSettings.RemoveAllPingsKey, RemoveAllPings);
+            OnKeyPress(PSettings.RemoveClosestPingKey, RemoveClosestToCursorPing);
         }
 
         private static void RemoveOldPings()
@@ -60,7 +59,7 @@ namespace pings
                 while (playerPings.Value.Count > 0)
                 {
                     var ping = playerPings.Value.First.Value;
-                    if (Time.time < ping.SpawnTime + Pings.PingDuration)
+                    if (Time.time < ping.SpawnTime + PSettings.PingDuration)
                         break;
                     RemoveOldestPing(playerPings.Key);
                 }
@@ -94,8 +93,7 @@ namespace pings
             if (!CastUtil.PingCast(ray, out var hit)) return; // If nothing hit, ignore
             
             var worldPos = hit.point;
-            var p = new PingMessage(worldPos, Pings.CurrentUserID);
-            RAPI.SendNetworkMessage(p, Pings.ModChannel); // Send ping to other players
+            Pings.mod.SendNetworkMessage(new PingMessage(worldPos, Pings.CurrentUserID)); // Send ping to other players
             CreatePing(Pings.CurrentUserID, worldPos, CastUtil.ClosestTransform(worldPos)); 
         }
         #endregion
@@ -113,7 +111,7 @@ namespace pings
             
             var posOnScreen = pointPos;
             bool isOnScreen = true;
-            if (Pings.ShowEdgePingAsArrow)
+            if (PSettings.ShowEdgePingAsArrow)
             {
                 posOnScreen.x = Mathf.Clamp(posOnScreen.x, BoundDistance, Screen.width - BoundDistance);
                 posOnScreen.y = Mathf.Clamp(posOnScreen.y, BoundDistance, Screen.height - BoundDistance);
@@ -187,7 +185,7 @@ namespace pings
         #endregion
 
         #region Ping Creation and Removal
-        internal static void CreatePing(ulong id, Vector3 worldPos, Transform hitTransform)
+        internal static void CreatePing(Network_UserId id, Vector3 worldPos, Transform hitTransform)
         {
             if (!hitTransform) return;
             
@@ -212,17 +210,16 @@ namespace pings
                 UIObject = pingObject,
                 SubObjects = subObjects,
                 SpawnTime = Time.time,
-                ID = id,
                 Outline = OutlineTools.CreateOutline(transformToOutline, id)
             };
     
             ActivePings[id].AddLast(newPing);
             
-            if (ActivePings[id].Count > Pings.MaxPingsPerPlayer)
+            if (ActivePings[id].Count > PSettings.MaxPingsPerPlayer)
                 RemoveOldestPing(id); // Remove existing ping for this player, if at max capacity
         }
         
-        private static void RemoveOldestPing(ulong id)
+        private static void RemoveOldestPing(Network_UserId id)
         {
             if (!ActivePings.TryGetValue(id, out var list) || list.First is null) return; // Skip if no queue with pings exists from this player
             var ping = list.First.Value;
@@ -250,7 +247,7 @@ namespace pings
             Destroy(ping.UIObject);
             OutlineTools.RemoveOutline(ping);
 
-            bool TryFindClosestPing(out ulong minID, out LinkedListNode<PingInstance> minPing)
+            bool TryFindClosestPing(out Network_UserId minID, out LinkedListNode<PingInstance> minPing)
             {
                 float maxDistance = Math.Min(Screen.width, Screen.height) / 4f;
                 var screenCenter = new Vector2(Screen.width / 2f, Screen.height / 2f);
@@ -328,8 +325,7 @@ namespace pings
                 if (Physics.SphereCast(ray.origin + ray.direction * distanceFromOrigin, radius, ray.direction, 
                         out hit, 280f, Mask))
                 {
-                    if (Pings.DebugMode >= 2)
-                        Debug.Log($"[Pings: Raycast] Hit layer: {LayerMask.LayerToName(hit.collider.gameObject.layer)} (#{hit.collider.gameObject.layer})");
+                    Pings.Log($"Hit layer: {LayerMask.LayerToName(hit.collider.gameObject.layer)} (#{hit.collider.gameObject.layer})", 2, "Raycast");
                     return true;
                 }
                 

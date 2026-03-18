@@ -44,7 +44,7 @@ namespace pings.outlines.fancy
 		[Range(0, 1)]       public float alphaCutoff = 0.5f;
 							public bool overdrawOutlines = true;
 
-		private static int lineThickness => (int)(4 * Pings.OutlineThicknessMultiplier);
+		private static int lineThickness => (int)(4 * PSettings.OutlineThicknessMultiplier);
 		private static Shader outlineBufferShader => FancyOutlineBundle.BufferShader;
 		private static ComputeShader computeShader => FancyOutlineBundle.OutlineShader;
 		

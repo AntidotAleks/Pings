@@ -1,10 +1,9 @@
 ﻿using System;
 using UnityEngine;
-using UnityEngine.Serialization;
 
 namespace pings
 {
-    public enum MessageTypes 
+    public enum MessageType 
     {
         PingsModIsPresent =     1001, // Sent by host to indicate Pings mod is present
         PingsModIsRemoved =     1002, // Sent by host when Mod is unloaded
@@ -18,16 +17,14 @@ namespace pings
         {
             if (Raft_Network.IsHost)
             {
-                if (Pings.DebugMode >= 2)
-                    Debug.Log("[Pings: Networking] Player is host, Pings mod is active.");
-                RAPI.SendNetworkMessage(new Message((Messages)MessageTypes.PingsModIsPresent), Pings.ModChannel);
+                Pings.Log("Player is host, Pings mod is active.", 2, "Networking");
+                Pings.mod.SendNetworkMessage((Messages)MessageType.PingsModIsPresent);
                 Pings.HasPingsMod = true;
             }
             else if (RAPI.IsCurrentSceneGame()) // In a world, but not host
             {
-                if (Pings.DebugMode >= 2)
-                    Debug.Log("[Pings: Networking] Player is not host, requesting Pings mod status.");
-                RAPI.SendNetworkMessage(new Message((Messages)MessageTypes.RequestPingsModStatus), Pings.ModChannel);
+                Pings.Log("[Pings: Networking] Player is not host, requesting Pings mod status.", 2, "Networking");
+                Pings.mod.SendNetworkMessage(MessageType.RequestPingsModStatus);
             }
         }
 
@@ -35,98 +32,69 @@ namespace pings
         {
             Pings.HasPingsMod = false;
             if (Raft_Network.IsHost)
-                RAPI.SendNetworkMessage(new Message((Messages)MessageTypes.PingsModIsRemoved), Pings.ModChannel);
+                Pings.mod.SendNetworkMessage(MessageType.PingsModIsRemoved);
                 // Notify clients that Pings mod is removed
         }
 
-        internal static void CheckMessages()
+        internal static void CheckMessages(object message)
         {
-            #region When message received
-            var netMessage = RAPI.ListenForNetworkMessagesOnChannel(Pings.ModChannel);
-            if (netMessage == null) return;
-            var message = netMessage.message;
-            #endregion
-            switch (message.Type)
+            switch (message)
             {
-                case (Messages)MessageTypes.PingsModIsPresent:
-                    
-                    if (Pings.DebugMode >= 2)
-                        Debug.Log("[Pings: Networking] Pings mod is enabled on the server.");
+                case MessageType.PingsModIsPresent:
+                    Pings.Log("Pings mod is enabled on the server.", 2, "Networking");
                     Pings.HasPingsMod = true;
                     break;
                 
                 
-                case (Messages)MessageTypes.PingsModIsRemoved:
-                    if (Pings.DebugMode >= 2)
-                        Debug.Log("[Pings: Networking] Pings mod was disabled on the server.");
+                case MessageType.PingsModIsRemoved:
+                    Pings.Log("Pings mod was disabled on the server.", 2, "Networking");
                     Pings.HasPingsMod = false;
                     break;
                 
                 
-                case (Messages)MessageTypes.RequestPingsModStatus:
-                    if (Pings.DebugMode >= 2)
-                        Debug.Log("[Pings: Networking] Received request for Pings mod status, responding...");
-                    RAPI.SendNetworkMessage(new Message((Messages)MessageTypes.PingsModIsPresent), Pings.ModChannel);
+                case MessageType.RequestPingsModStatus:
+                    Pings.Log("Received request for Pings mod status, responding.", 2, "Networking");
+                    Pings.mod.SendNetworkMessage(MessageType.PingsModIsPresent);
                     break;
                 
-                
-                case (Messages)MessageTypes.Ping:
-                    if (!(message is PingMessage pingMessage))
-                        break; // Ensure the message is of type PingMessage
-                    
-                    UserID senderSteamID = pingMessage.id;
-                    if (senderSteamID == Pings.CurrentUserID)
-                        break;
-                        // Ignore relayed own pings (self -> host -> self)
+                case PingMessage pingMessage:
+                    var senderID = pingMessage.id;
+                    if (senderID == Pings.CurrentUserID)
+                        return; // Ignore relayed own pings (self -> host -> self)
 
-                    var position = pingMessage.Position();
+                    var position = pingMessage.Position;
                     if (Raft_Network.IsHost)
-                        RAPI.SendNetworkMessage(new PingMessage(position, senderSteamID), Pings.ModChannel); 
-                        // As host, relay ping to all others (someone -> host-self -> everyone)
+                        Pings.mod.SendNetworkMessage(new PingMessage(position, senderID)); // As host, relay ping to all others (someone -> host-self -> everyone)
                     
                     var hitTransform = CastUtil.ClosestTransform(position); // Find the closest transform to the ping position
-                    if (Pings.DebugMode >= 2)
-                        Debug.Log($"[Pings: Networking] Received a ping packet at {position} from player {senderSteamID.GetUsername()}.");
-                    PingManager.CreatePing(senderSteamID, position, hitTransform);
+                    Pings.Log($"Received a ping packet at {position} from player {RAPI.GetUsernameFromUserID(senderID)}.", 2, "Networking");
+                    PingManager.CreatePing(senderID, position, hitTransform);
                     break;
-                
                 
                 default:
-                    if (Pings.DebugMode >= 1)
-                        Debug.Log($"[Pings: Networking] Unknown message type received: {netMessage.message.Type}. Is another mod using the same channel ({Pings.ModChannel})?");
+                    Pings.Log($"Unknown message type received: {message.GetType()} ({message})", 2, "Networking");
                     break;
             }
+            
         }
-        
     }
 
     [Serializable]
     public class PingMessage : Message
     {
-        public string positionStr;
-        public ulong id;
+        public Network_UserId id;
+        public float x, y, z;
 
         // Sending player's SteamID through the message since network messages don't carry it on relay
-        public PingMessage(Vector3 position, UserID id)
-            : base((Messages)MessageTypes.Ping)
+        public PingMessage(Vector3 position, Network_UserId id)
+            : base((Messages)MessageType.Ping)
         {
-            positionStr = position.x + "|" + position.y + "|" + position.z; // Serialize position as a string
+            x = position.x;
+            y = position.y;
+            z = position.z;
             this.id = id;
         }
 
-        public Vector3 Position()
-        {
-            if (string.IsNullOrEmpty(positionStr)) return Vector3.zero;
-
-            var parts = positionStr.Split('|');
-            if (parts.Length == 3 &&
-                float.TryParse(parts[0], out var x) &&
-                float.TryParse(parts[1], out var y) &&
-                float.TryParse(parts[2], out var z)
-            )
-                return new Vector3(x, y, z);
-
-            return Vector3.zero;
-        }
+        public Vector3 Position => new Vector3(x, y, z);
     }
 }

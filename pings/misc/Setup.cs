@@ -131,7 +131,7 @@ namespace pings
                 // Arrow points: top, right, bottom, left
                 vh.AddVert(new Vector3(0, h), color, Vector2.zero);    // Top
                 vh.AddVert(new Vector3(w, -h), color, Vector2.zero);   // Right
-                vh.AddVert(new Vector3(0, -h/2), color, Vector2.zero);    // Bottom
+                vh.AddVert(new Vector3(0, -h/2), color, Vector2.zero); // Bottom
                 vh.AddVert(new Vector3(-w, -h), color, Vector2.zero);  // Left
 
                 // Two triangles to form an arrow
@@ -145,7 +145,7 @@ namespace pings
             var source = LocalizationManager.Sources?[0];
             if (source == null)
             {
-                Debug.LogError("No language sources found. Should not happen. If happened, skill issue.");
+                Pings.LogError("No language sources found. Should not happen. If happened, skill issue.");
                 return;
             }
             
@@ -167,11 +167,11 @@ namespace pings
             try {
                 QuickOutlineBundle.OutlineMaterial = _assetQuick.LoadAsset<Material>("OutlineMask");
                 QuickOutlineBundle.FillMaterial = _assetQuick.LoadAsset<Material>("OutlineFill");
-            } catch (Exception ex) { Debug.LogError($"[Pings: Setup] Failed to load Quick Outline Materials: {ex}"); }
+            } catch (Exception ex) { Pings.LogError($"Failed to load Quick Outline Materials: {ex}", sub:"Setup"); }
             _assetQuick?.Unload(false);
 
-            if (!QuickOutlineBundle.OutlineMaterial) Debug.LogError("[Pings: Setup] Failed to load Quick Outline Material");
-            if (!QuickOutlineBundle.FillMaterial) Debug.LogError("[Pings: Setup] Failed to load Quick Outline Fill Material");
+            if (!QuickOutlineBundle.OutlineMaterial) Pings.LogError("Failed to load Quick Outline Material", sub:"Setup");
+            if (!QuickOutlineBundle.FillMaterial) Pings.LogError("ailed to load Quick Outline Fill Material", sub:"Setup");
             
             // Fancy Outline
             // https://github.com/cakeslice/Outline-Effect
@@ -183,18 +183,18 @@ namespace pings
             try {
                 FancyOutlineBundle.BufferShader = _assetFancy.LoadAsset<Shader>("BufferShader");
                 FancyOutlineBundle.OutlineShader = _assetFancy.LoadAsset<ComputeShader>("OutlineShader");
-            } catch (Exception ex) { Debug.LogError($"[Pings: Setup] Failed to load Fancy Outline Materials: {ex}"); }
+            } catch (Exception ex) { Pings.LogError($"Failed to load Fancy Outline Materials: {ex}", sub:"Setup"); }
             _assetFancy?.Unload(false);
         
-            if (!FancyOutlineBundle.BufferShader) Debug.LogError("[Pings: Setup] Failed to load Fancy Outline Buffer Shader");
-            if (!FancyOutlineBundle.OutlineShader) Debug.LogError("[Pings: Setup] Failed to load Fancy Outline Compute Shader");
+            if (!FancyOutlineBundle.BufferShader) Pings.LogError("Failed to load Fancy Outline Buffer Shader", sub:"Setup");
+            if (!FancyOutlineBundle.OutlineShader) Pings.LogError("Failed to load Fancy Outline Compute Shader", sub:"Setup");
         }
 
         internal static void UnloadAssets()
         {
             
             var allOutlines = FindObjectsOfType<Outline>(); // In case any outlines are left behind
-            if (allOutlines.Length > 0) Debug.Log($"[Pings: Unloading] Destroying {allOutlines.Length} outline(s)");
+            if (allOutlines.Length > 0) Pings.Log($"Destroying {allOutlines.Length} outline(s)", sub:"Unloading");
             foreach (var outline in allOutlines) if (outline)
             {
                 outline.enabled = false;

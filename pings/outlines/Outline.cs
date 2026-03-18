@@ -27,14 +27,14 @@ namespace pings.outlines
         [CanBeNull]
         public static Outline CreateOutline(Transform target, ulong id)
         {
-            if (!target || Pings.Style == OutlineStyle.Disabled) return null;
+            if (!target || PSettings.Style == OutlineStyle.Disabled) return null;
 
             try {
                 var outline = GetOrCreateOutlineComponent(target.gameObject);
                 outline.SetColor(GetColor(id));
                 outline.enabled = true;
             
-                if(Pings.DebugMode == 2) Debug.Log($"[Pings: Outline] Using outline (ID: {outline.GetInstanceID()})");
+                Pings.Log($"Using outline (ID: {outline.GetInstanceID()})", 2, "Outline");
                 
                 return outline;
             }
@@ -46,7 +46,7 @@ namespace pings.outlines
             var outline = ping.Outline;
             ping.Outline = null;
             if (!outline || OutlineIsUsed(outline)) return;
-            if (Pings.DebugMode == 2) Debug.Log($"[Pings: Outline] Removing outline (ID: {outline.GetInstanceID()})");
+            Pings.Log($"Removing outline (ID: {outline.GetInstanceID()})", 2, "Outline");
             Object.Destroy(outline);
         }
 
@@ -77,7 +77,7 @@ namespace pings.outlines
         {
             if (go.TryGetComponent<Outline>(out var outline)) return outline;
 
-            switch (Pings.Style)
+            switch (PSettings.Style)
             {
                 case OutlineStyle.Quick: return go.AddComponent<QuickOutline>();
                 
@@ -87,7 +87,7 @@ namespace pings.outlines
                         _lastCamera?.gameObject.GetComponents<FancyOutlineOnCamera>()?.ForEach(Object.DestroyImmediate);
                         _lastCamera = Pings.Camera;
                         _lastCamera.gameObject.GetComponents<FancyOutlineOnCamera>()?.ForEach(Object.DestroyImmediate);
-                        if (Pings.DebugMode == 2) Debug.Log($"[Pings: Outline] Updating camera reference for Fancy Outline (ID: {_lastCamera.GetInstanceID()})");
+                        Pings.Log($"Updating camera reference for Fancy Outline (ID: {_lastCamera.GetInstanceID()})", 2, "Outline");
                         Pings.Camera.gameObject.AddComponent<FancyOutlineOnCamera>();
                     }
                     return go.AddComponent<FancyOutline>();
@@ -110,16 +110,16 @@ namespace pings.outlines
             // return Color.HSVToRGB(Random.value, .7f+Random.value*.2f, .8f+Random.value*.2f); // Test
             bool isSelf = id == Pings.CurrentUserID;
             
-            switch (Pings.Style)
+            switch (PSettings.Style)
             {
                 case OutlineStyle.Quick:
-                    return Pings.PingColor;
+                    return PSettings.PingColor;
                 case OutlineStyle.Fancy:
-                    if (isSelf && Pings.HasOwnPingColor)
-                        return Pings.OwnPingColor;
-                    return Pings.UniquePingColors ? 
+                    if (isSelf && PSettings.HasOwnPingColor)
+                        return PSettings.OwnPingColor;
+                    return PSettings.UniquePingColors ? 
                         Color.HSVToRGB((id % 1000) / 1000f, 0.8f, 1) 
-                        : Pings.PingColor;
+                        : PSettings.PingColor;
 
                 default: throw new ArgumentOutOfRangeException();
             }
